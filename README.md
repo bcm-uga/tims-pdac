@@ -4,8 +4,8 @@ This repository contains all the script to reproduce the analysis and the figure
 
 ## Analysis
 
-`master_simulation.R` run the simulation analysis
-`master_pdac` run the analysis on real data
+-`master_simulation.R` run the simulation analysis
+-`master_pdac.R` run the analysis on real data
 
 ## Figures
 
