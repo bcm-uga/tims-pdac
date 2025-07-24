@@ -1,0 +1,316 @@
+################
+### Figure 4 ###
+################
+
+library(survival)
+library(survminer)
+library(gridExtra)
+library(ggplot2)  
+library(ComplexHeatmap)
+
+### Load and process data
+
+# Load the TCGA-PAAD data
+tcga_data = readRDS("results/01_tcga_data_expo_deconv.rds") # Load the TCGA-PAAD data
+
+# Load the immune cell-type estimation
+datIMM = read.csv2("results/03_tcga_consensus_deconv_immune_cells.csv", header = TRUE, stringsAsFactors = FALSE, row.names = 1, sep = ",")
+datIMM[] <- lapply(datIMM, function(x) as.numeric(as.character(x)))
+datIMM$all = rowSums(datIMM)
+colnames(datIMM) = c("Macrophages", "B cells", "T cells", "NK", "DCs", "Tot. Imm." )
+
+# Load the significant AMR results
+tobacco_AMR <- readRDS("~/projects/thema_surv/real_data/results/03_tcga_significative_from_top50_tobacco_AMR_fdr0_05_V2_K8_corrected.rds")
+AMR_names = tobacco_AMR$AMR_info$AMR
+
+# Load the AMR results (methylation value per AMR)
+datAMR = read.csv2("results/03_tcga_AMR_mean_meth_top50_fdr0_05_V2_K8_corrected.csv", header = TRUE, stringsAsFactors = FALSE, row.names = 1, sep = ",") 
+datAMR[] <- lapply(datAMR, function(x) as.numeric(as.character(x)))
+
+# Process the smoking variable from TCGA-PAAD metadata
+smoking = ifelse(tcga_data$tobacco==0, 'Non-smoker', 'Smoker')
+names(smoking) = rownames(tcga_data$M)
+labels = smoking[rownames(datAMR)]
+smoking_status = as.numeric(as.factor(labels))
+
+#result of the mediation to collect latent factors
+res_med = readRDS("results/02_tcga_med_tobacco_dnam_V2_K8_corrected.rds")
+LFs = res_med$hdmax2_step1_param$AS_1$U
+
+
+### PANEL A: TCGA-PAAD heatmap of deconvolution results
+
+X_deconv = as.data.frame(t(tcga_data$X_deconv$Consensus))
+X_deconv$TotalImmune = c(tcga_data$prop_immune)
+range(X_deconv)
+X_deconv = X_deconv[,c("TotalImmune","B cells","T cells","DCs","NK","Neutrophils","Macrophages",
+                       "Endothelial","Fibroblasts",
+                       "Cancer basal","Cancer classical")]
+colnames(X_deconv) = c("Tot. Imm.","B cells","T cells","DCs","NK","Neutrophils","Macrophages",
+                       "Endothelial","Fibroblasts",
+                       "Cancer basal","Cancer classical")
+					   
+Z_score = apply(X_deconv, 2, function(x) (x-mean(x, na.rm=T))/sd(x, na.rm=T))
+range(Z_score, na.rm=T)
+
+# Annotation pre processing
+gender = ifelse(tcga_data$gender == 1, "male", "female")
+grade = tcga_data$grade
+stopifnot(length(gender) == nrow(Z_score))
+stopifnot(length(grade) == nrow(Z_score))
+
+# Row annotation
+row_anno = rowAnnotation(
+  Gender = gender,
+  Grade = grade,
+  col = list(
+    Gender = c("male" = "brown", "female" = "yellow"),
+    Grade = structure(RColorBrewer::brewer.pal(length(unique(grade)), "Set2"),
+                      names = unique(grade))
+  ),
+  show_annotation_name = TRUE
+)
+
+
+pdf("figures/fig4_panelA.pdf", width = 4, height =4)
+ComplexHeatmap::Heatmap(Z_score[,colnames(Z_score) != 'Neutrophils'],
+                        cluster_rows = T,
+                        show_row_names = F,
+                        cluster_columns = F,
+						 left_annotation = row_anno)
+dev.off()
+
+### PANEL B: survival curves for immune cell types
+
+
+# Run cox model and select significant immmune features
+
+pval_thres = 0.15
+
+res = apply(datIMM, 2, function(x) {
+  model = survival::coxph(survival::Surv(tcga_data$time, tcga_data$status) ~ x + tcga_data$age + tcga_data$gender +  tcga_data$grade)
+  summary(model)$coefficients[, "Pr(>|z|)"]
+})
+
+print(res)
+immune_names = names(which(res[1,] <= pval_thres)) # select imm -> survival in the graph
+length(immune_names)
+
+# Plot Kaplan-Meier
+
+selected_vars <- colnames(datIMM)[1:6]  
+plots <- list()
+
+time_in_months <- tcga_data$time / 30.44  # 1 month ≈ 30.44 jours
+
+for (var in selected_vars) {
+  
+  # Dichotomize based on the median
+  group <- ifelse(datIMM[[var]] >= median(datIMM[[var]], na.rm = TRUE), "High", "Low")
+  group <- factor(group, levels = c("Low", "High"))
+  plot_data <- data.frame(time = time_in_months, event = tcga_data$status, group = group)
+  
+  # Créer l'objet de survie
+  surv_obj <- survival::Surv(time = time_in_months, event = tcga_data$status)
+  
+  # Kaplan-Meier survival estimation
+  fit <- survival::survfit(surv_obj ~ group)
+  
+  # Plot
+  p <- ggsurvplot(
+    fit,
+    data = plot_data,
+    risk.table = FALSE,
+    pval = TRUE,
+    title = var,
+    legend.title = var,
+    legend.labs = c("Low", "High"),
+    palette = c("#E7B800", "#2E9FDF"),
+    xlab = "Time (months)"
+  )
+  
+  plots[[var]] <- p
+}
+
+#  Display the 6 survival curves in a 2x3 grid
+combined_plot = arrange_ggsurvplots(plots, ncol = 3, nrow = 2)
+
+ggsave("figures/fig4_panelB.pdf", plot = combined_plot, width = 8, height = 5, dpi = 300)
+
+### PANEL C: Causal discovery
+
+pval_thres = 0.15
+
+# details of each model for publication:
+
+prop100= datIMM[,"Tot. Imm."]*100 #to interpret the HR has increase of 1 unit (1% of immune infiltration) lead to HR likely to dire than persons with 1% less
+mod = survival::coxph(survival::Surv(tcga_data$time, tcga_data$status) ~ prop100 + tcga_data$age + tcga_data$gender +  tcga_data$grade)
+summary(mod)
+
+prop100= datIMM[,"B cells"]*100 #to interpret the HR has increase of 1 unit (1% of immune infiltration) lead to HR likely to dire than persons with 1% less
+mod = survival::coxph(survival::Surv(tcga_data$time, tcga_data$status) ~ prop100 + tcga_data$age + tcga_data$gender +  tcga_data$grade)
+summary(mod)
+
+prop100= datIMM[,"DCs"]*100 #to interpret the HR has increase of 1 unit (1% of immune infiltration) lead to HR likely to dire than persons with 1% less
+mod = survival::coxph(survival::Surv(tcga_data$time, tcga_data$status) ~ prop100 + tcga_data$age + tcga_data$gender +  tcga_data$grade)
+summary(mod)
+
+# Latent factor assessment
+
+cor = apply(LFs, 2, function(x) {
+  cor.test(x, smoking_status)$p.value
+})
+
+cor
+
+
+# Step 1: Unconditional independence testing
+
+pval_thres = 0.1
+
+## Tobacco-Survival association: Cox proportional hazards model
+
+SURV_TOB = survival::coxph(survival::Surv(tcga_data$time, tcga_data$status) ~  smoking_status + tcga_data$age + tcga_data$gender +  tcga_data$grade)
+summary(SURV_TOB)
+
+## Tobacco-Immune associations: Linear regression models
+
+IMMtot_TOB = lm(datIMM[ ,"Tot. Imm."]~smoking_status + tcga_data$age + tcga_data$gender +  tcga_data$grade)    
+summary(IMMtot_TOB) 
+
+IMMbcell_TOB = lm(datIMM[ ,"B cells"]~smoking_status + tcga_data$age + tcga_data$gender +  tcga_data$grade)    
+summary(IMMbcell_TOB) 
+
+IMMDCs_TOB = lm(datIMM[ ,"DCs"]~smoking_status + tcga_data$age + tcga_data$gender +  tcga_data$grade)
+summary(IMMDCs_TOB) 
+
+
+AMR = "AMR2"
+imm = "B cells"
+
+num_res = list()
+
+for (AMR in AMR_names){ 
+  
+  for (imm in immune_names) {
+    
+    
+    pair = paste(AMR, "-", imm, sep = "")
+    print(paste0("Testing AMR:", AMR, " and Immune:", imm))
+    
+    # Check consisty of T -> AMR -> S path
+    
+    #  Check the link between tobacco and the AMR 
+    mod_tob = lm(datAMR[,AMR]~smoking_status + tcga_data$age + tcga_data$gender +  tcga_data$grade)
+    tob_sign =  summary(mod_tob)$coefficients[2,4]  < pval_thres 
+    
+    #  check the link between the AMR and survival
+    mod_AMR = survival::coxph(survival::Surv(tcga_data$time, tcga_data$status) ~  datAMR[,AMR] + tcga_data$age + tcga_data$gender +  tcga_data$grade)
+    AMR_sign =  summary(mod_AMR)$coefficients[1, "Pr(>|z|)"] < pval_thres 
+    
+    
+    if (tob_sign == TRUE & AMR_sign == TRUE) {
+      
+      print(paste0(" AMR:", AMR, " and Immune:", imm, " is kept for doanwstream analysis. "))
+      
+      # Step 2: Conditional independence testing
+      
+      #  Which node coefficient will lose its significance between AMR and imm ?
+      mod_part = survival::coxph(survival::Surv(tcga_data$time, tcga_data$status) ~  datIMM[ ,imm] + datAMR[,AMR]  + tcga_data$age + tcga_data$gender +  tcga_data$grade)
+      summary(mod_part)
+      part_surv_sign = summary(mod_part)$coefficients[1:2, "Pr(>|z|)"] 
+      
+      # Step 3: Edge orientation
+      
+      # Check the link between the immune and smoking status when controlling for AMR
+      dat = data.frame(
+        smoking_status = as.numeric(as.factor(labels)) -1,
+        AMR = datAMR[,AMR],
+        imm = datIMM[ ,imm],
+        age = tcga_data$age,
+        gender = tcga_data$gender,
+        grade =   tcga_data$grade
+      )
+      
+      mod = glm(smoking_status~ ., data = dat, family = binomial(link = "logit"))
+      summary(mod)
+      part_imm_sign = summary(mod)$coefficients[2:3,4] # check if imm is significant
+      
+      # Generate result tables
+      num_res[[pair]] = c( part_surv_sign,
+                           part_imm_sign)
+      names(num_res[[pair]]) = c("part_IMM_sign_to_surv", 
+                                 "part_AMR_sign_to_surv_when_IMM_controlled",
+                                 "part_AMR_sign_to_smoking",
+                                 "part_IMM_sign_to_smoking_when_AMR_controlled")
+    } else {
+      print(paste0(" AMR:", AMR, " and Immune:", imm, " is not kept for doanwstream analysis. "))
+     
+    }
+    
+  }
+  
+  
+}
+num_res = do.call(rbind, num_res)
+num_res=data.frame(num_res)
+
+# Directed acyclic graph 1
+res_CAT1 = num_res[  num_res$part_IMM_sign_to_surv < pval_thres &
+                       num_res$part_AMR_sign_to_surv_when_IMM_controlled < pval_thres, ]
+rownames(res_CAT1)
+
+# Directed acyclic graph 2
+res_CAT2 = num_res[  num_res$part_IMM_sign_to_surv < pval_thres &
+                       num_res$part_AMR_sign_to_surv_when_IMM_controlled >= pval_thres, ]
+rownames(res_CAT2)
+
+
+plot_part_cor = function(mat){
+  
+  colnames(mat) = c("Model 1 : S~I+A, pval I", 
+                    "Model 1 : S~I+A, pval A",
+                    "Model 2 : T~I+A, pval A",
+                    "Model 2 : T~I+A, pval I")
+  
+  df <- data.frame(
+    cell_type = rep(rownames(mat), times = ncol(mat)),
+    variable = rep(colnames(mat), each = nrow(mat)),
+    value = as.vector(as.matrix(mat))
+  )
+  
+  df$significance <- ifelse(df$value <= 0.1, "Significant", "Not Significant")
+  
+  p <- ggplot(df, aes(x = variable, y = cell_type,
+                      color = value,
+                      shape = significance)) +
+    geom_point(size = 4) +
+    scale_color_gradientn(
+      colours = c("darkblue", "skyblue", "lightgrey", "white"),
+      values = scales::rescale(c(0, 0.1, 0.2, 1)),
+      limits = c(0, 1),
+      oob = scales::squish,
+      name = "P-value"
+    ) +
+    scale_shape_manual(
+      values = c("Significant" = 16, "Not Significant" = 17)
+    ) +
+    theme_minimal() +
+    labs(
+     # title = "Partial correlation",
+      x = "Linear models",
+      y = "Pairs",
+      shape = "Significativity"
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  
+  return(p)
+}
+
+pdf("figures/fig4_panelC1.pdf", width = 4, height =3.5)
+plot_part_cor(mat = res_CAT1)
+dev.off()
+
+pdf("figures/fig4_panelC2.pdf", width = 4, height =3.5)
+plot_part_cor(mat = res_CAT2)
+dev.off()
