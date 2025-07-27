@@ -197,21 +197,21 @@ select_results <- function(results, param1Value, param2Value, param3Value, model
         sign_res <- sign(res_med)
         sign_res[sign_res == -1] <- "-"
         sign_res[sign_res == 1] <- "+"
-        significante = r$res_effect$med$pmax  <= alpha/r$sim_effect$param_values$n
+        significante = r$res_effect$med$pmax  <= alpha/r$sim_effect$param_values$nb_causal_probes
       } else if(method == "hima" && model != "hima"){
         res_med <- as.numeric(r$res_effect$IDE)
         res_feat <- r$res_effect$Index
         sign_res <- sign(res_med)
         sign_res[sign_res == -1] <- "-"
         sign_res[sign_res == 1] <- "+"
-        significante = r$res_effect$pmax  <= alpha/r$sim_effect$param_values$n
+        significante = r$res_effect$pmax  <= alpha/r$sim_effect$param_values$nb_causal_probes
       } else{
         res_med <- as.numeric(r$res_effect$effects$univariate$ACME$est)
         res_feat <- r$res_effect$effects$univariate$ACME$feat
         sign_res <- sign(res_med)
         sign_res[sign_res == -1] <- "-"
         sign_res[sign_res == 1] <- "+"
-        significante = r$res_effect$effects$univariate$ACME$pval <= alpha/r$sim_effect$param_values$n
+        significante = r$res_effect$effects$univariate$ACME$pval <= alpha/r$sim_effect$param_values$nb_causal_probes
       }
       
       all_probes <- union(mediators_name, res_feat)
@@ -267,7 +267,7 @@ for (i in seq_len(nrow(model_methods_df))) {
             model       = model,
             method      = method,
             simu        = simus[s],
-            alpha       = 0.1
+            alpha       = 0.05
           )
           
           # calcul du score
