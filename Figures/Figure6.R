@@ -23,7 +23,7 @@ tcga_data$probes_info = lapply(tcga_data$probes_info, function(x) {
 
 tobacco_AMR <- readRDS("results/03_tcga_significative_from_top50_tobacco_AMR_fdr0_05_V2_K8_corrected.rds")
 
-interesting_AMR = c("AMR17", "AMR42", "AMR46")
+interesting_AMR = c("AMR1", "AMR17", "AMR42", "AMR46")
 tcga_dna_amr = lapply(interesting_AMR, function(x)
   tcga_dna[tobacco_AMR$CpG_related_info[[x]],])
 names(tcga_dna_amr) = interesting_AMR
@@ -60,7 +60,7 @@ feat_type = mapply(function(x, y) cpg_annotation[cpg_annotation$Start>=min(x) & 
 #load gene expression
 tcga_exprs0 = readRDS("results/study_TCGA-PAAD_trscr.rds")
 
-genes <- c("NAA11", "CHL1", "SPTBN2")
+genes <- c("NAA11", "CHL1", "SPTBN2", "HIST1H4E")
 expr = t(tcga_exprs0$data[genes, rownames(tcga_data$M)])
 df = data.frame(expr,status = ifelse(tcga_data$tobacco==0, 'Non-smoker', 'Smoker'))
 
@@ -130,7 +130,8 @@ plot_AMR <- function(dat, name, vec, gene) {
     
     ggplot(df, aes(x = AMR_Value, y = Cell_Prop, color = Smoking_Status)) +
       geom_point(alpha = 0.7, size = 2) +
-      geom_smooth(method = "lm", se = FALSE) +
+      geom_smooth(aes(), method = "lm", se = FALSE, color = "black") + 
+     # geom_smooth(method = "lm", se = FALSE) +
       scale_x_continuous(limits = c(0, 1)) +
       scale_color_manual(values = c("Non-smoker" = "blue", "Smoker" = "red")) +
       labs(
@@ -175,30 +176,38 @@ plot_AMR <- function(dat, name, vec, gene) {
   return(final_plot)
 }
 
+### PANEL A: AMR1 - Tot. Imm. - "CHL1"
 
-### PANEL A: AMR17 - DCs - NAA11
+name = "AMR1"
+dat = df_tcga_dna_amr[["AMR1"]]
+vec = c("AMR1-Tot. Imm.")
+gene = "HIST1H4E"
+final_plot = plot_AMR(dat, name, vec, gene)
+ggsave("figures/fig6_panelA.pdf", final_plot, width = 8, height = 4, units = "in")
+
+### PANEL B: AMR17 - DCs - NAA11
 
 name = "AMR17"
 dat = df_tcga_dna_amr[["AMR17"]]
 vec = c("AMR17-DCs")
 gene = "NAA11"
 final_plot = plot_AMR(dat, name, vec, gene)
-ggsave("figures/fig6_panelA.pdf", final_plot, width = 8, height = 4, units = "in")
+ggsave("figures/fig6_panelB.pdf", final_plot, width = 8, height = 4, units = "in")
 
-### PANEL B: AMR42 - Tot. Imm. - "SPTBN2"
+### PANEL C: AMR42 - Tot. Imm. - "SPTBN2"
 
 name = "AMR42"
 dat = df_tcga_dna_amr[["AMR42"]]
 vec = c("AMR42-Tot. Imm.")
 gene = "SPTBN2"
 final_plot = plot_AMR(dat, name, vec, gene)
-ggsave("figures/fig6_panelB.pdf", final_plot, width = 8, height = 4, units = "in")
+ggsave("figures/fig6_panelC.pdf", final_plot, width = 8, height = 4, units = "in")
 
-### PANEL C: AMR62 - Tot. Imm. - "CHL1"
+### PANEL D: AMR46 - Tot. Imm. - "CHL1"
 
 name = "AMR46"
 dat = df_tcga_dna_amr[["AMR46"]]
-vec = c("AMR46-Tot. Imm.")
+vec = c("AMR46-DCs")
 gene = "CHL1"
 final_plot = plot_AMR(dat, name, vec, gene)
-ggsave("figures/fig6_panelC.pdf", final_plot, width = 8, height = 4, units = "in")
+ggsave("figures/fig6_panelD.pdf", final_plot, width = 8, height = 4, units = "in")

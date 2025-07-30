@@ -33,9 +33,11 @@ names(smoking) = rownames(tcga_data$M)
 labels = smoking[rownames(datAMR)]
 smoking_status = as.numeric(as.factor(labels))
 
-#result of the mediation to collect latent factors
+#Latent factor composition and correlation
 res_med = readRDS("results/02_tcga_med_tobacco_dnam_V2_K8_corrected.rds")
 LFs = res_med$hdmax2_step1_param$AS_1$U
+colnames(LFs) = paste0("LF_", c("A", "B", "C", "D", "E", "F", "G", "H"))
+pairs_list = readRDS("results/05_signLFs_by_pairs-A-I.rds")
 
 
 ### PANEL A: TCGA-PAAD heatmap of deconvolution results
@@ -139,7 +141,7 @@ ggsave("figures/fig4_panelB.pdf", plot = combined_plot, width = 8, height = 5, d
 
 ### PANEL C: Causal discovery
 
-pval_thres = 0.15
+pval_thres = 0.1
 
 # details of each model for publication:
 
@@ -157,36 +159,37 @@ summary(mod)
 
 # Latent factor assessment
 
-cor = apply(LFs, 2, function(x) {
+surv_LF = apply(LFs, 2, function(x) {
+  survival::coxph(survival::Surv(tcga_data$time, tcga_data$status) ~ x)
+})
+surv_LF
+
+tob_LF = apply(LFs, 2, function(x) {
   cor.test(x, smoking_status)$p.value
 })
+tob_LF
 
-cor
 
-
-# Step 1: Unconditional independence testing
-
-pval_thres = 0.1
+# Step 1: Unconditional independence resting
 
 ## Tobacco-Survival association: Cox proportional hazards model
 
-SURV_TOB = survival::coxph(survival::Surv(tcga_data$time, tcga_data$status) ~  smoking_status + tcga_data$age + tcga_data$gender +  tcga_data$grade)
+SURV_TOB = survival::coxph(survival::Surv(tcga_data$time, tcga_data$status) ~  smoking_status + tcga_data$age + tcga_data$gender +  tcga_data$grade )
 summary(SURV_TOB)
 
 ## Tobacco-Immune associations: Linear regression models
 
-IMMtot_TOB = lm(datIMM[ ,"Tot. Imm."]~smoking_status + tcga_data$age + tcga_data$gender +  tcga_data$grade)    
+IMMtot_TOB = lm(datIMM[ ,"Tot. Imm."]~smoking_status + tcga_data$age + tcga_data$gender +  tcga_data$grade )    
 summary(IMMtot_TOB) 
 
-IMMbcell_TOB = lm(datIMM[ ,"B cells"]~smoking_status + tcga_data$age + tcga_data$gender +  tcga_data$grade)    
+IMMbcell_TOB = lm(datIMM[ ,"B cells"]~smoking_status + tcga_data$age + tcga_data$gender +  tcga_data$grade )    
 summary(IMMbcell_TOB) 
 
 IMMDCs_TOB = lm(datIMM[ ,"DCs"]~smoking_status + tcga_data$age + tcga_data$gender +  tcga_data$grade)
 summary(IMMDCs_TOB) 
 
 
-AMR = "AMR2"
-imm = "B cells"
+AMR_names = tobacco_AMR$AMR_info$AMR
 
 num_res = list()
 
@@ -198,45 +201,81 @@ for (AMR in AMR_names){
     pair = paste(AMR, "-", imm, sep = "")
     print(paste0("Testing AMR:", AMR, " and Immune:", imm))
     
+    # Get significant LFs 
+    LFs_names = pairs_list[[pair]]
+    covar =   data.frame(age = tcga_data$age,
+                         gender = tcga_data$gender,
+                         grade =   tcga_data$grade
+    )
+    if (is.na(LFs_names[1])) {
+      print(paste0("No significant LFs for pair: ", pair))
+    } else {
+      print(paste0("Significant LFs for pair: ", pair, " are: ", paste(LFs_names, collapse = ", ")))
+      covar = cbind(covar, LFs[, LFs_names, drop = FALSE])
+    }
+    
+    
     # Check consisty of T -> AMR -> S path
     
     #  Check the link between tobacco and the AMR 
-    mod_tob = lm(datAMR[,AMR]~smoking_status + tcga_data$age + tcga_data$gender +  tcga_data$grade)
+    
+    df_model <- data.frame(
+      y = datAMR[, AMR],
+      smoking_status = smoking_status,
+      covar  
+    )
+    mod_tob <- lm(y ~ ., data = df_model)
     tob_sign =  summary(mod_tob)$coefficients[2,4]  < pval_thres 
     
     #  check the link between the AMR and survival
-    mod_AMR = survival::coxph(survival::Surv(tcga_data$time, tcga_data$status) ~  datAMR[,AMR] + tcga_data$age + tcga_data$gender +  tcga_data$grade)
+    
+    df_model <- data.frame(
+      y = datAMR[, AMR],
+      time = tcga_data$time,
+      status = tcga_data$status,
+      covar)
+    
+    mod_AMR <- survival::coxph(
+      survival::Surv(time, status) ~ y +  ., 
+      data = df_model  
+    )
+    
     AMR_sign =  summary(mod_AMR)$coefficients[1, "Pr(>|z|)"] < pval_thres 
     
+    # Step 2: Conditional independence testing
     
     if (tob_sign == TRUE & AMR_sign == TRUE) {
       
       print(paste0(" AMR:", AMR, " and Immune:", imm, " is kept for doanwstream analysis. "))
+      # (Model 1) Which node coefficient will lose its significance between AMR and imm ?
       
-      # Step 2: Conditional independence testing
-      
-      #  Which node coefficient will lose its significance between AMR and imm ?
-      mod_part = survival::coxph(survival::Surv(tcga_data$time, tcga_data$status) ~  datIMM[ ,imm] + datAMR[,AMR]  + tcga_data$age + tcga_data$gender +  tcga_data$grade)
-      summary(mod_part)
+      df_model <- data.frame(
+        time = tcga_data$time,
+        status = tcga_data$status,
+        imm = datIMM[[imm]],
+        amr = datAMR[[AMR]],
+        covar
+      )
+      mod_part <- survival::coxph(
+        survival::Surv(time, status) ~ imm + amr +  .,
+        data = df_model
+      )
       part_surv_sign = summary(mod_part)$coefficients[1:2, "Pr(>|z|)"] 
       
-      # Step 3: Edge orientation
       
-      # Check the link between the immune and smoking status when controlling for AMR
-      dat = data.frame(
+      # (Model 2) check the link between the immune and smoking status when controlling for AMR
+      
+      
+      df_model <- data.frame(
         smoking_status = as.numeric(as.factor(labels)) -1,
         AMR = datAMR[,AMR],
         imm = datIMM[ ,imm],
-        age = tcga_data$age,
-        gender = tcga_data$gender,
-        grade =   tcga_data$grade
+        covar
       )
-      
-      mod = glm(smoking_status~ ., data = dat, family = binomial(link = "logit"))
+      mod = glm(smoking_status~ ., data = df_model, family = binomial(link = "logit"))
       summary(mod)
       part_imm_sign = summary(mod)$coefficients[2:3,4] # check if imm is significant
       
-      # Generate result tables
       num_res[[pair]] = c( part_surv_sign,
                            part_imm_sign)
       names(num_res[[pair]]) = c("part_IMM_sign_to_surv", 
@@ -245,7 +284,11 @@ for (AMR in AMR_names){
                                  "part_IMM_sign_to_smoking_when_AMR_controlled")
     } else {
       print(paste0(" AMR:", AMR, " and Immune:", imm, " is not kept for doanwstream analysis. "))
-     
+      #num_res[[pair]] = c(NA, NA, NA, NA)
+      #names(num_res[[pair]]) = c("part_IMM_sign_to_surv", 
+      #                            "part_AMR_sign_to_surv_when_IMM_controlled",
+      #                           "part_AMR_sign_to_smoking",
+      #                           "part_IMM_sign_to_smoking_when_AMR_controlled")
     }
     
   }
@@ -258,6 +301,7 @@ num_res=data.frame(num_res)
 # Directed acyclic graph 1
 res_CAT1 = num_res[  num_res$part_IMM_sign_to_surv < pval_thres &
                        num_res$part_AMR_sign_to_surv_when_IMM_controlled < pval_thres, ]
+res_CAT1
 rownames(res_CAT1)
 
 # Directed acyclic graph 2
@@ -266,12 +310,13 @@ res_CAT2 = num_res[  num_res$part_IMM_sign_to_surv < pval_thres &
 rownames(res_CAT2)
 
 
+
 plot_part_cor = function(mat){
   
-  colnames(mat) = c("Model 1 : S~I+A, pval I", 
-                    "Model 1 : S~I+A, pval A",
-                    "Model 2 : T~I+A, pval A",
-                    "Model 2 : T~I+A, pval I")
+  colnames(mat) = c("Model 1: S~I+A+C, (pval I)", 
+                    "Model 1: S~I+A+C, (pval A)",
+                    "Model 2: T~I+A+C, (pval A)",
+                    "Model 2: T~I+A+C, (pval I)")
   
   df <- data.frame(
     cell_type = rep(rownames(mat), times = ncol(mat)),
@@ -279,27 +324,25 @@ plot_part_cor = function(mat){
     value = as.vector(as.matrix(mat))
   )
   
+  df$abs_value <- abs(df$value)
   df$significance <- ifelse(df$value <= 0.1, "Significant", "Not Significant")
   
-  p <- ggplot(df, aes(x = variable, y = cell_type,
-                      color = value,
-                      shape = significance)) +
-    geom_point(size = 4) +
-    scale_color_gradientn(
-      colours = c("darkblue", "skyblue", "lightgrey", "white"),
-      values = scales::rescale(c(0, 0.1, 0.2, 1)),
-      limits = c(0, 1),
-      oob = scales::squish,
-      name = "P-value"
-    ) +
-    scale_shape_manual(
-      values = c("Significant" = 16, "Not Significant" = 17)
-    ) +
+  
+  p = ggplot(df, aes(x = variable, y = cell_type,
+                     size = abs_value,
+                     color = value,
+                     shape = significance)) +
+    geom_point() +
+    scale_size(range = c(2, 8)) +
+    scale_color_gradient(low = "darkblue", high = "lightblue") +
+    scale_shape_manual(values = c("Significant" = 16, "Not Significant" = 17)) +  # 16 = rond, 17 = triangle
     theme_minimal() +
     labs(
-     # title = "Partial correlation",
+      title = "Partial correlation",
       x = "Linear models",
       y = "Pairs",
+      color = "P-value",
+      size = "Intensity",
       shape = "Significativity"
     ) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
@@ -307,10 +350,11 @@ plot_part_cor = function(mat){
   return(p)
 }
 
-pdf("figures/fig4_panelC1.pdf", width = 4, height =3.5)
+
+pdf("figures/fig4_panelC1.pdf", width = 5, height =5)
 plot_part_cor(mat = res_CAT1)
 dev.off()
 
-pdf("figures/fig4_panelC2.pdf", width = 4, height =3.5)
+  pdf("figures/fig4_panelC2.pdf", width = 5, height =5)
 plot_part_cor(mat = res_CAT2)
 dev.off()
