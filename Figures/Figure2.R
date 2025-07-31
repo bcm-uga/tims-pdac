@@ -7,6 +7,7 @@ library(dplyr)
 library(tidyr)
 library(gridExtra)
 library(viridis)
+library(stringr)
 
 param1 = "mean_A"
 param2 = "mean_B"
@@ -48,8 +49,9 @@ df_sub$model <- factor(
 
 
 # Création des fonctions de labelling
-lab_param1 <- function(x) paste0("mean A = ", x)
-lab_param2 <- function(x) paste0("mean B = ", x)
+lab_param1 <- function(x) paste0("mean alpha = ", x)  
+lab_param2 <- function(x) paste0("mean beta = ", x)  
+
 
 
 big_theme <- theme(
@@ -331,8 +333,9 @@ big_theme <- theme(
 )
 
 
-col_labeller  <- function(x) paste0("Mean A = ", x)  # colonnes (param1)
-row_labeller  <- function(x) paste0("Mean B = ", x)  # lignes   (param2)
+col_labeller  <- function(x) paste0("Mean alpha = ", x)  # colonnes (param1)
+row_labeller  <- function(x) paste0("Mean beta = ", x)  # lignes   (param2)
+
 
 dodge_w <- 0.8
 
