@@ -35,8 +35,8 @@ df_sub$model <- factor(
   )
 )
 
-lab_param1 <- function(x) paste0("mean A = ", x)
-lab_param2 <- function(x) paste0("mean B = ", x)
+lab_param1 <- function(x) paste0("mean alpha = ", x)
+lab_param2 <- function(x) paste0("mean beta = ", x)
 
 big_theme <- theme(
   plot.title   = element_text(size = 16, face = "bold"),   
@@ -118,8 +118,8 @@ df_sub$model <- factor(
 library(ggplot2)
 library(viridis)
 
-lab_param1 <- function(x) paste0("mean A = ", x)
-lab_param2 <- function(x) paste0("mean B = ", x)
+lab_param1 <- function(x) paste0("mean alpha = ", x)
+lab_param2 <- function(x) paste0("mean beta = ", x)
 
 big_theme <- theme(
   plot.title   = element_text(size = 16, face = "bold"), 
@@ -221,8 +221,8 @@ for (s in 1:30) {
 
 
 
-lab_param1 <- function(x) paste0("mean A = ", x)
-lab_param2 <- function(x) paste0("mean B = ", x)
+lab_param1 <- function(x) paste0("mean alpha = ", x)
+lab_param2 <- function(x) paste0("mean beta = ", x)
 
 big_theme <- theme(
   plot.title   = element_text(size = 16, face = "bold"),   
@@ -257,8 +257,8 @@ p_pval2_0B <- ggplot(df, aes(
   facet_grid(
     meanB ~ meanA,
     labeller = labeller(
-      param1 = lab_param1,
-      param2 = lab_param2
+      meanA = lab_param1,
+      meanB = lab_param2
     )
   ) +
   theme_bw() +
