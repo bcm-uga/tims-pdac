@@ -1,0 +1,101 @@
+---
+title: "Processing_sc_PDCA"
+output: html_document
+date: "2025-01-27"
+---
+
+```{r echo=FALSE, eval=TRUE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim", dpi=75)
+layout(1, respect=TRUE)
+```
+
+```{r reference_profiles}
+if (file.exists("results/00_sc_peng.rds") & file.exists("results/00_sc_raghavan.rds")) {
+  stop("no need to run this script")
+}
+# Single-cell = Peng / Raghavan
+ref_rna_scpeng = readRDS("../../datashare/genref_hadaca3/00_peng_k_2019.rds")
+ref_rna_scragh = readRDS("../../datashare/genref_hadaca3/00_raghavan_s_2021.rds")
+```
+
+```{r prep_single_cell}
+set.seed(1)
+
+source("deconv_scripts/deconv_puriST.R")
+load("deconv_scripts/deconv_puriST_fitted.Rdata") # load classifiers
+classifs = classifs[[1]]
+
+# Peng
+# Keep correct cell types
+peng = ref_rna_scpeng$cell_type
+peng[peng == "Endothelial cell"] = 'Endothelial'
+peng[peng == "B cell"] = 'B cells'
+peng[peng == "T cell"] = 'T cells'
+peng[peng == "Macrophage cell"] = 'Macrophages'
+peng[peng %in% c("Stellate cell","Fibroblast cell")] = 'Fibroblasts'
+peng[peng == "Ductal cell type 2"] = 'tumor'
+peng[!(peng %in% c('Endothelial','B cells','T cells','Macrophages','Fibroblasts','tumor'))] = 'other'
+ref_rna_scpeng = ref_rna_scpeng[,peng != 'other']
+ref_rna_scpeng$cell_type = peng[peng != 'other']
+
+# Sample 5000 cells retaining all 35 samples
+cell_sample = unlist(lapply(unique(ref_rna_scpeng$sample), function(x)
+  sample(colnames(ref_rna_scpeng[,ref_rna_scpeng$sample==x]), round(5000/length(unique(ref_rna_scpeng$sample))))))
+ref_rna_scpeng = ref_rna_scpeng[,cell_sample]
+
+# Label classic vs basal
+ref_rna_scpeng2 = ref_rna_scpeng[, ref_rna_scpeng$cell_type=='tumor']
+ref_rna_scpeng2 = Seurat::SCTransform(ref_rna_scpeng2)
+peng_pred = apply_classifier(data = ref_rna_scpeng2@assays$RNA$counts, classifier = classifs)
+peng_pred$Subtype[peng_pred$Subtype_graded %in% c("likely basal-like","strong basal-like")] <- "Cancer basal"
+peng_pred$Subtype[peng_pred$Subtype_graded  %in% c("likely classical","strong classical")] <- "Cancer classical"
+peng_pred$Subtype[grep("lean",peng_pred$Subtype_graded)] <-  "undefined_tumor"
+ref_rna_scpeng2$purist = peng_pred$Subtype
+ref_rna_scpeng$cell_type[names(ref_rna_scpeng2$purist)] = ref_rna_scpeng2$purist
+ref_rna_scpeng = ref_rna_scpeng[, ref_rna_scpeng$cell_type!='undefined_tumor']
+
+# Raghavan
+# Keep correct cell types
+ragh = ref_rna_scragh$cell_type
+ragh[ragh == "Endothelial"] = 'Endothelial'
+ragh[ragh == "B_Cells"] = 'B cells'
+ragh[ragh == "Macrophage"] = 'Macrophages'
+ragh[ragh == "T_NK"] = 'NK'
+ragh[ragh == "T_Regs"] = 'Treg'
+ragh[ragh == "DC"] = 'DC'
+ragh[ragh == "pDC_cell"] = 'pDC'
+ragh[ragh == "XCR1_DC"] = 'XCR1-DC'
+ragh[ragh == "Tumor"] = 'tumor'
+ragh[!(ragh %in% c('Endothelial','B cells','Macrophages','NK','Treg','DC','pDC','XCR1-DC','tumor'))] = 'other'
+ref_rna_scragh = ref_rna_scragh[,ragh != 'other']
+ref_rna_scragh$cell_type = ragh[ragh != 'other']
+
+# Sample 5000 cells retaining all samples
+cell_sample1 = colnames(ref_rna_scragh[,ref_rna_scragh$sample=="met_1"])
+cell_sample2 = sample(colnames(ref_rna_scragh[,ref_rna_scragh$sample=="met_2"]),5000-length(cell_sample1))
+ref_rna_scragh = ref_rna_scragh[,c(cell_sample1,cell_sample2)]
+
+# Label classic vs basal
+ref_rna_scragh2 = ref_rna_scragh[, ref_rna_scragh$cell_type=='tumor']
+ref_rna_scragh2 = Seurat::SCTransform(ref_rna_scragh2)
+ragh_pred = apply_classifier(data = ref_rna_scragh2@assays$RNA$counts, classifier = classifs)
+ragh_pred$Subtype[ragh_pred$Subtype_graded %in% c("likely basal-like","strong basal-like")] <- "Cancer basal"
+ragh_pred$Subtype[ragh_pred$Subtype_graded  %in% c("likely classical","strong classical")] <- "Cancer classical"
+ragh_pred$Subtype[grep("lean",ragh_pred$Subtype_graded)] <-  "undefined_tumor"
+ref_rna_scragh2$purist = ragh_pred$Subtype
+ref_rna_scragh$cell_type[names(ref_rna_scragh2$purist)] = ref_rna_scragh2$purist
+ref_rna_scragh = ref_rna_scragh[, ref_rna_scragh$cell_type!='undefined_tumor']
+
+rm(ref_rna_scpeng2,ref_rna_scragh2)
+rm(peng_pred,ragh_pred,peng,ragh,cell_sample,
+   classifs,apply_classifier,ind_fun)
+```
+
+```{r save}
+saveRDS(ref_rna_scpeng, "results/00_sc_peng.rds")
+saveRDS(ref_rna_scragh, "results/00_sc_raghavan.rds")
+```
+
+```{r session_info}
+sessionInfo()
+```

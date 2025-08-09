@@ -1,0 +1,331 @@
+ ---
+title: "Processing+Deconv_PDAC_TCGA"
+output: html_document
+date: "2025-01-27"
+---
+
+```{r echo=FALSE, eval=TRUE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim", dpi=75)
+layout(1, respect=TRUE)
+```
+
+```{r reference_profiles}
+# Retrieve bulk and single-cell references
+# Bulk = cometh lot1 (PaCL2)
+ref_rna_bulk = readRDS("../../datashare/cometh_lot1/transcriptome/T_raw.rds")
+
+# Single-cell = Peng / Raghavan
+#devtools::install_github("humengying0907/InstaPrism")
+#devtools::install_github('xuranw/MuSiC')
+library(InstaPrism)
+library(MuSiC)
+ref_rna_scpeng = readRDS("results/00_sc_peng.rds")
+ref_rna_scragh = readRDS("results/00_sc_raghavan.rds")
+```
+
+```{r load_data}
+# Load TCGA PDAC data
+data_meth = readRDS("../../datashare/TCGA_PAAD/study_TCGA-PAAD_meth.rds")
+data_trans = readRDS("../../datashare/TCGA_PAAD/study_TCGA-PAAD_trscr.rds")
+meta = read.csv2("../../datashare/TCGA_PAAD/PublishedSampleTable.csv",
+                 header = TRUE)
+raw_exp = read.delim("../../datashare/TCGA_PAAD/clinical.project-tcga-paad.2024-07-30/exposure.tsv")
+
+idx_to_keep = meta$Tumor.Sample.ID[which(meta$Tumor.Sample.ID %in% colnames(data_trans$data))]
+dat_meth = data_meth$data[, idx_to_keep]
+dat_trans = data_trans$data[, idx_to_keep]
+meta = meta[meta$Tumor.Sample.ID %in% idx_to_keep,]
+dim(dat_meth)
+dim(dat_trans)
+
+rownames(raw_exp) = paste0(raw_exp$case_submitter_id, "-01A")
+raw_exp = raw_exp[idx_to_keep,]
+
+# n=149
+
+# remove NAs from dat_meth
+idx_na_rows = apply(dat_meth, 1, function(x)
+  any(is.na(x)))
+dat_meth = dat_meth[!idx_na_rows,]
+dim(dat_meth)
+
+# filter out sex chromosomes
+probes_chr = intersect(rownames(data_meth$platform)[!(data_meth$platform[,1] %in% c("chrX", "chrY", "*"))],
+                   rownames(dat_meth))
+probes_chr_CHR = data_meth$platform[probes_chr,]$Chromosome
+probes_chr_BP = data_meth$platform[probes_chr,]$Start
+probes_chr_GeneSymbol = data_meth$platform[probes_chr,]$Gene_Symbol
+probes_chr_End = data_meth$platform[probes_chr,]$End
+dat_meth = dat_meth[probes_chr,]
+
+# remove rows summing to 0 - USELESS
+#idx_zero = (rowSums(dat_meth) == 0)
+#dat_meth = dat_meth[!idx_zero,]
+#dim(dat_meth)
+
+# keep only samples w/ follow up (n=143)
+dat_trans = dat_trans[, !is.na(meta$Follow.up.days) & !is.na(meta$Censored.1.yes.0.no) & meta$Follow.up.days!=0]
+dim(dat_trans)
+
+dat_meth = dat_meth[, colnames(dat_trans)]
+rownames(meta) = meta$Tumor.Sample.ID
+meta = meta[colnames(dat_trans), ]
+raw_exp = raw_exp[colnames(dat_trans), ]
+
+rm(idx_na_rows,idx_to_keep,probes_chr)
+
+gc()
+```
+
+```{r prep_single_cell}
+set.seed(1)
+
+# Make InstaPrism objects
+insta_peng = refPrepare(sc_Expr = ref_rna_scpeng@assays$RNA$counts,
+                        cell.type.labels = ref_rna_scpeng@meta.data$cell_type,
+                        cell.state.labels = ref_rna_scpeng@meta.data$cell_type)
+insta_ragh = refPrepare(sc_Expr = ref_rna_scragh@assays$RNA$counts,
+                        cell.type.labels = ref_rna_scragh@meta.data$cell_type,
+                        cell.state.labels = ref_rna_scragh@meta.data$cell_type)
+```
+
+```{r RNA_deconvolution}
+# get the deconvolution exposition
+# RLR
+mix = as.matrix(dat_trans[intersect(rownames(dat_trans),rownames(ref_rna_bulk)),])
+ref_rlr = as.matrix(ref_rna_bulk[intersect(rownames(dat_trans),rownames(ref_rna_bulk)),])
+ref_rlr <- sweep(ref_rlr, 2, DESeq2::estimateSizeFactorsForMatrix(ref_rlr), "/")
+deconv_rlr_rna <- t(EpiDISH::epidish(mix, ref_rlr, method = "RPC")$estF)
+
+# InstaPrism
+deconv_insta_peng = InstaPrism(bulk_Expr = dat_trans, refPhi_cs = insta_peng)@Post.ini.ct@theta
+deconv_insta_ragh = InstaPrism(bulk_Expr = dat_trans, refPhi_cs = insta_ragh)@Post.ini.ct@theta
+
+# SCDC
+# https://meichendong.github.io/SCDC/articles/SCDC.html#scdc-on-simulated-data-1
+source("deconv_scripts/deconv_SCDC.R")
+qc_peng <- SCDC_qc(getESET_sc(ref_rna_scpeng),
+                   ct.varname = "cell_type", sample = "sample",
+                   scsetname = "Peng",
+                   ct.sub = unique(ref_rna_scpeng@meta.data$cell_type),
+                   qcthreshold = 0.7)
+qc_ragh <- SCDC_qc(getESET_sc(ref_rna_scragh),
+                   ct.varname = "cell_type", sample = "sample",
+                   scsetname = "Raghavan",
+                   ct.sub = unique(ref_rna_scragh@meta.data$cell_type),
+                   qcthreshold = 0.7)
+deconv_scdc_ens2 <- SCDC_ENSEMBLE(bulk.eset = getESET_bulk(dat_trans),
+                  sc.eset.list = list(peng = qc_peng$sc.eset.qc,
+                                      ragh = qc_ragh$sc.eset.qc),
+                  ct.varname = "cell_type", sample = "sample",
+                  ct.sub = unique(c(ref_rna_scpeng@meta.data$cell_type,
+                                  ref_rna_scragh@meta.data$cell_type)))
+deconv_scdc_peng = t(deconv_scdc_ens2$prop.only$peng)
+deconv_scdc_ragh = t(deconv_scdc_ens2$prop.only$ragh)[rownames(deconv_insta_ragh),]
+# Take the intercept of the cell types (+ colSums=1)
+common_types = intersect(ref_rna_scpeng@meta.data$cell_type, ref_rna_scragh@meta.data$cell_type)
+deconv_scdc_ens2$prop.only$peng = t(apply(deconv_scdc_ens2$prop.only$peng[,common_types], 1, function(x)
+      x / sum(x)))
+deconv_scdc_ens2$prop.only$ragh = t(apply(deconv_scdc_ens2$prop.only$ragh[,common_types], 1, function(x)
+      x / sum(x)))
+deconv_scdc_ens = t(Reduce("+",
+                         lapply(seq(length(deconv_scdc_ens2$prop.only)), function(n)
+                           deconv_scdc_ens2$w_table[3,n] * deconv_scdc_ens2$prop.only[[n]])))
+
+# MuSiC
+# https://xuranw.github.io/MuSiC/articles/MuSiC.html
+library(MuSiC)
+library(SingleCellExperiment)
+peng_sce = SingleCellExperiment::SingleCellExperiment(list(counts=ref_rna_scpeng@assays$RNA$counts),
+            colData = data.frame(cell_type = ref_rna_scpeng$cell_type,
+                                 cellname = colnames(ref_rna_scpeng),
+                                 sample = ref_rna_scpeng$sample,
+                                 patient = ref_rna_scpeng$patient))
+ragh_sce = SingleCellExperiment::SingleCellExperiment(list(counts=ref_rna_scragh@assays$RNA$counts),
+            colData = data.frame(cell_type = ref_rna_scragh$cell_type,
+                                 cellname = colnames(ref_rna_scragh),
+                                 sample = ref_rna_scragh$sample,
+                                 patient = ref_rna_scragh$patient))
+deconv_music_peng = t(music_prop(bulk.mtx = exprs(getESET_bulk(dat_trans)),
+                               sc.sce = peng_sce,
+                               clusters = 'cell_type',
+                               samples = 'sample')$Est.prop.weighted)
+deconv_music_ragh = t(MuSiC::music_prop(bulk.mtx = exprs(getESET_bulk(dat_trans)),
+                               sc.sce = ragh_sce,
+                               clusters = 'cell_type',
+                               samples = 'sample')$Est.prop.weighted)
+
+gc()
+```
+
+```{r consensus_deconv}
+Amat = list("RLR_rna"=as.matrix(deconv_rlr_rna),
+         "InstaPrism_peng"=as.matrix(deconv_insta_peng),
+         "InstaPrism_ragh"=as.matrix(deconv_insta_ragh),
+         "SCDC_peng"=as.matrix(deconv_scdc_peng),
+         "SCDC_ragh"=as.matrix(deconv_scdc_ragh),
+         "MuSiC_peng"=as.matrix(deconv_music_peng),
+         "MuSiC_ragh"=as.matrix(deconv_music_ragh))
+lapply(Amat,rownames)
+
+# Only 1 T cell category / 1 DC category
+Amat$RLR_rna = rbind(Amat$RLR_rna[!(rownames(Amat$RLR_rna) %in% c("CD4 T cells","CD8 T cells")),],
+                  colSums(Amat$RLR_rna[rownames(Amat$RLR_rna) %in% c("CD4 T cells","CD8 T cells"),]))
+rownames(Amat$RLR_rna)[nrow(Amat$RLR_rna)] = 'T cells'
+rownames(Amat$InstaPrism_ragh)[rownames(Amat$InstaPrism_ragh) == "Treg"] = 'T cells'
+rownames(Amat$SCDC_ragh)[rownames(Amat$SCDC_ragh) == "Treg"] = 'T cells' 
+rownames(Amat$MuSiC_ragh)[rownames(Amat$MuSiC_ragh) == "Treg"] = 'T cells'
+
+Amat$InstaPrism_ragh = rbind(Amat$InstaPrism_ragh[!(rownames(Amat$InstaPrism_ragh) %in% c("pDC","DC","XCR1-DC")),],
+                  colSums(Amat$InstaPrism_ragh[rownames(Amat$InstaPrism_ragh) %in% c("pDC","DC","XCR1-DC"),]))
+Amat$SCDC_ragh = rbind(Amat$SCDC_ragh[!(rownames(Amat$SCDC_ragh) %in% c("pDC","DC","XCR1-DC")),],
+                  colSums(Amat$SCDC_ragh[rownames(Amat$SCDC_ragh) %in% c("pDC","DC","XCR1-DC"),]))
+Amat$MuSiC_ragh = rbind(Amat$MuSiC_ragh[!(rownames(Amat$MuSiC_ragh) %in% c("pDC","DC","XCR1-DC")),],
+                  colSums(Amat$MuSiC_ragh[rownames(Amat$MuSiC_ragh) %in% c("pDC","DC","XCR1-DC"),]))
+rownames(Amat$InstaPrism_ragh)[nrow(Amat$InstaPrism_ragh)] = 'DCs'
+rownames(Amat$SCDC_ragh)[nrow(Amat$SCDC_ragh)] = 'DCs'
+rownames(Amat$MuSiC_ragh)[nrow(Amat$MuSiC_ragh)] = 'DCs'
+
+# Same for references but first I have to pseudo-bulk the single cell
+pseudobulk_peng = t(pbapply::pbapply(ref_rna_scpeng@assays$RNA$counts, 1, function(x)
+        tapply(x, ref_rna_scpeng$cell_type, mean)))
+pseudobulk_ragh = t(pbapply::pbapply(ref_rna_scragh@assays$RNA$counts, 1, function(x)
+        tapply(x, ref_rna_scragh$cell_type, mean)))
+  
+Tmat = list("RLR_rna"=as.matrix(ref_rlr),
+            "InstaPrism_peng"=as.matrix(pseudobulk_peng),
+            "InstaPrism_ragh"=as.matrix(pseudobulk_ragh),
+            "SCDC_peng"=as.matrix(pseudobulk_peng),
+            "SCDC_ragh"=as.matrix(pseudobulk_ragh),
+            "MuSiC_peng"=as.matrix(pseudobulk_peng),
+            "MuSiC_ragh"=as.matrix(pseudobulk_ragh))
+
+# Only 1 T cell category / 1 DC category
+Tmat$RLR_rna = cbind(Tmat$RLR_rna[,!(colnames(Tmat$RLR_rna) %in% c("CD4 T cells","CD8 T cells"))],
+                  rowMeans(Tmat$RLR_rna[,colnames(Tmat$RLR_rna) %in% c("CD4 T cells","CD8 T cells")]))
+colnames(Tmat$RLR_rna)[ncol(Tmat$RLR_rna)] = 'T cells'
+colnames(Tmat$InstaPrism_ragh)[colnames(Tmat$InstaPrism_ragh) == "Treg"] = 'T cells'
+colnames(Tmat$SCDC_ragh)[colnames(Tmat$SCDC_ragh) == "Treg"] = 'T cells' 
+colnames(Tmat$MuSiC_ragh)[colnames(Tmat$MuSiC_ragh) == "Treg"] = 'T cells'
+
+Tmat$InstaPrism_ragh = cbind(Tmat$InstaPrism_ragh[,!(colnames(Tmat$InstaPrism_ragh) %in% c("pDC","DC","XCR1-DC"))],
+                  rowMeans(Tmat$InstaPrism_ragh[,colnames(Tmat$InstaPrism_ragh) %in% c("pDC","DC","XCR1-DC")]))
+Tmat$SCDC_ragh = cbind(Tmat$SCDC_ragh[,!(colnames(Tmat$SCDC_ragh) %in% c("pDC","DC","XCR1-DC"))],
+                  rowMeans(Tmat$SCDC_ragh[,colnames(Tmat$SCDC_ragh) %in% c("pDC","DC","XCR1-DC")]))
+Tmat$MuSiC_ragh = cbind(Tmat$MuSiC_ragh[,!(colnames(Tmat$MuSiC_ragh) %in% c("pDC","DC","XCR1-DC"))],
+                  rowMeans(Tmat$MuSiC_ragh[,colnames(Tmat$MuSiC_ragh) %in% c("pDC","DC","XCR1-DC")]))
+colnames(Tmat$InstaPrism_ragh)[ncol(Tmat$InstaPrism_ragh)] = 'DCs'
+colnames(Tmat$SCDC_ragh)[ncol(Tmat$SCDC_ragh)] = 'DCs'
+colnames(Tmat$MuSiC_ragh)[ncol(Tmat$MuSiC_ragh)] = 'DCs'
+lapply(Tmat,colnames)
+
+# Compute RMSE for each element of X
+rmse <- function(x,y) {
+    sqrt(mean((x-y)^2, na.rm = T))
+}
+
+reconstruction <- mapply(function(tmat,amat) {
+  mat = tmat[,rownames(amat)]%*%amat
+  mat[intersect(rownames(mat),rownames(dat_trans)),]
+  }, Tmat, Amat)
+D_vectorized <- lapply(reconstruction, function(x) c(dat_trans[rownames(x),]))
+reconstruction_vectorized = lapply(reconstruction,c)
+
+error <- mapply(function(real,pred) rmse(real,pred), D_vectorized, reconstruction_vectorized)
+
+all_types = unique(unlist(lapply(Amat,rownames)))
+Amat$Consensus = t(sapply(all_types, function(type) {
+  res = list()
+  for (pred in names(Amat)) {
+    if (type %in% rownames(Amat[[pred]])) {
+      res[[pred]] = Amat[[pred]][type,]
+    }
+  }
+  if (length(res)==1) {return(res[[1]])}
+  else {
+    error_pred = error[names(res)]
+    weight_error <- 1/error_pred / sum(1/error_pred)
+    Reduce('+', mapply(function(prediction, weight) prediction*weight, res, weight_error, SIMPLIFY = F))
+    }
+}))
+
+# Normalize colSums for the consensus
+Amat$Consensus = apply(Amat$Consensus, 2, function(x) x/sum(x, na.rm=T))
+colSums(Amat$Consensus)
+```
+
+```{r define_variables}
+# X exposition
+X_expo = list("RLR_rna"=as.matrix(deconv_rlr_rna),
+              "InstaPrism_peng"=as.matrix(deconv_insta_peng),
+              "InstaPrism_ragh"=as.matrix(deconv_insta_ragh),
+              "SCDC_peng"=as.matrix(deconv_scdc_peng),
+              "SCDC_ragh"=as.matrix(deconv_scdc_ragh),
+              "SCDC_ens"=as.matrix(deconv_scdc_ens),
+              "MuSiC_peng"=as.matrix(deconv_music_peng),
+              "MuSiC_ragh"=as.matrix(deconv_music_ragh),
+              "Consensus"=Amat$Consensus)
+
+# M matrix
+M = t(dat_meth)
+
+# survival data
+time = meta$Follow.up.days
+cens = !meta$Censored.1.yes.0.no
+
+# smoking exposure
+smoking = raw_exp$cigarettes_per_day
+smoking = as.numeric(smoking)
+smoking[is.na(smoking)] = 0
+smoking_bin = smoking
+smoking_bin[smoking>0] = 1
+
+# alcohol exposure
+alcohol = raw_exp$alcohol_history
+alcohol[alcohol=="Yes"] = 1
+alcohol[alcohol=="No"] = 0
+alcohol[alcohol=="Not Reported"] = NA
+alcohol = as.numeric(alcohol)
+
+# covariables
+age = meta$Age.at.initial.pathologic.diagnosis
+sex = meta$Gender
+sex[which(sex == "male")] = 1
+sex[which(sex == "female")] = 2
+sex = as.numeric(sex)
+grade = meta$Grade
+grade = as.numeric(sapply(grade, function(x) strsplit(x," ", fixed=T)[[1]][2]))
+
+# chr13
+# loc_chr13 = readRDS("~/projects/thema_surv/loc_chr13.rds")
+# nloc13 = rownames(data_meth$platform[which(data_meth$platform$Chromosome=="chr13"),])
+# M_sample_13 =  M[, which(colnames(M) %in% nloc13)]
+
+# Prop of all immune cells
+immune_cells = c("Neutrophils","Macrophages","B cells", "T cells", "NK","DCs")
+prop_immune = colSums(X_expo$Consensus[rownames(X_expo$Consensus) %in% immune_cells,])
+```
+
+```{r save}
+data = list(#M_13 = M_sample_13,
+            M = M,
+            X_deconv = X_expo,
+            tobacco_bin = smoking_bin,
+            tobacco = smoking,
+            alcohol = alcohol,
+            time = time,
+            status = cens,
+            age = age,
+            gender = sex,
+            grade = grade,
+            probes_info = list(CHR=probes_chr_CHR,
+                               BP=probes_chr_BP,
+                               Gene_Symbol=probes_chr_GeneSymbol,
+                               End=probes_chr_End),
+            prop_immune = prop_immune)
+saveRDS(data, "results/01_tcga_data_expo_deconv.rds")
+```
+
+```{r session_info}
+sessionInfo()
+```

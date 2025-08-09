@@ -1,0 +1,650 @@
+---
+title: "AMR biology"
+output: html_document
+date: "2025-03-28"
+---
+
+```{r echo=FALSE, eval=TRUE}
+knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim", dpi=75)
+layout(1, respect=TRUE)
+```
+
+# Load data
+
+```{r}
+library(ggplot2)
+library(ggpubr)
+library(see)
+library(dplyr)
+library(kableExtra)
+library("illuminaHumanv4.db")
+library(knitr)
+library(webshot2)
+
+#tobacco_AMR <- readRDS("~/projects/thema_surv/real_data/results/03_tcga_significative_from_top50_tobacco_AMR_fdr0_05_alter.rds")
+tobacco_AMR <- readRDS("~/projects/thema_surv/real_data/results/03_tcga_significative_from_top50_tobacco_AMR_fdr0_05_V2_K8_corrected.rds")
+
+tcga_data = readRDS("~/projects/thema_surv/real_data/results/01_tcga_data_expo_deconv.rds")
+
+# Load platform
+platform = readRDS("~/projects/thema_surv/real_data/results/platform_meth_icgc.rds")
+cpg_annotation = platform
+#cpg_annotation = readRDS("~/projects/thema_surv/merged_data/results/01_aggregated_platform.rds") #DEPRECATED
+cpg_annotation_custom = readRDS("~/projects/thema_surv/real_data/results/03_platform_info_tcga_meth.rds") #differences in pre-processing of Gene_Symbol column (MAG: the code could be optimized)
+
+
+# Load immune data
+datIMM = read.csv2("~/projects/thema_surv/real_data/results/03_tcga_consensus_deconv_immune_cells.csv", header = TRUE, stringsAsFactors = FALSE, row.names = 1, sep = ",")
+datIMM[] <- lapply(datIMM, function(x) as.numeric(as.character(x)))
+datIMM$all = rowSums(datIMM)
+colnames(datIMM) = c( "Macrophages",  "B cells",     "T cells" ,    "NK",          "DCs" ,        "all" )
+
+#Load AMR data
+datAMR = read.csv2("~/projects/thema_surv/real_data/results/03_tcga_AMR_mean_meth_top50_fdr0_05_V2_K8_corrected.csv", header = TRUE, stringsAsFactors = FALSE, row.names = 1, sep = ",")
+datAMR[] <- lapply(datAMR, function(x) as.numeric(as.character(x)))
+
+#load gene expression
+tcga_exprs0 = readRDS("~/projects/datashare/TCGA_PAAD/study_TCGA-PAAD_trscr.rds")
+
+#bedfile
+bed = readRDS("~/projects/datashare/all_human_tissues/bed_grch37_epimeddb.rds")
+
+#get the results of serial mediation
+idx_woLF = readRDS("~/projects/thema_surv/real_data/results/06_TCGA_serial_med_top50_V2_K8_corrected_without_LF_selected_combinaison.rds") # without Latent Factor
+length(idx_woLF)
+idx_wLF = readRDS("~/projects/thema_surv/real_data/results/06_TCGA_serial_med_top50_V2_K8_corrected_with_LF_selected_combinaison.rds") # with Latent Factor
+length(idx_wLF)
+```
+
+# Plot AMR length/size/pval
+
+```{r}
+# Plot AMR length / nb
+
+df_length = data.frame("AMR"=names(tobacco_AMR$CpG_related_info),
+                       "Nb"=tobacco_AMR$AMR_info$nb,
+                       "Size"=tobacco_AMR$AMR_info$end-tobacco_AMR$AMR_info$start)
+
+df_pval = data.frame("AMR"=names(tobacco_AMR$CpG_related_info),
+                     "value"=c(-log10(tobacco_AMR$AMR_info$p),-log10(tobacco_AMR$AMR_info$fdr)),
+                     "type"=rep(c('-log(Pvalue)','-log(FDR)'),each=nrow(tobacco_AMR$AMR_info)))
+
+ggplot(df_length, aes(Nb)) +
+  geom_histogram(fill='grey15') +
+  xlab("AMR (# of CpGs)") +
+  ylab("Count") +
+  geom_hline(yintercept=10, linetype='dashed', color="grey40") +
+  geom_hline(yintercept=15, linetype='dashed', color="grey40") +
+  geom_hline(yintercept=5, linetype='dashed', color="grey40") +
+  scale_x_continuous(breaks = 1:10) +
+  theme_modern()
+ggplot(df_length, aes(Size)) +
+  geom_histogram(fill='grey15') +
+  xlab("AMR size (pb)") +
+  ylab("Count") +
+  theme_modern()
+
+ggplot(df_pval, aes(x=type, y=value)) +
+  geom_violin(aes(fill=type)) +
+  geom_point(alpha=.8, size=.5) +
+  geom_line(aes(group=AMR), alpha=.3) +
+  guides(fill='none') +
+  scale_fill_manual(values=c("blue2","red3")) +
+  xlab("") +
+  ylab("Value") +
+  theme_modern()
+```
+
+# Table of cpgs and chr associated to each AMR
+
+```{r}
+df_table = data.frame("AMR"=names(tobacco_AMR$CpG_related_info),
+                      "Chromosome"=tobacco_AMR$AMR_info$chr,
+                      "Size (pb)"=tobacco_AMR$AMR_info$end-tobacco_AMR$AMR_info$start,
+                      "CpGs"=sapply(tobacco_AMR$CpG_related_info, function(x) paste(x,collapse=", ")))
+
+# Get matching genes
+
+#cpg_annotation = readRDS("~/projects/thema_surv/merged_data/results/01_aggregated_platform.rds")
+#cpg_annotation_custom = readRDS("~/projects/thema_surv/real_data/results/03_platform_info_tcga_meth.rds") #differences in pre-processing of Gene_Symbol column (MAG: the code could be optimized)
+
+allgenes = lapply(cpg_annotation_custom$Gene_Symbol, function(x) {
+  res=unique(strsplit(x,";")[[1]])
+  res[res=="."]=NA
+  paste(res,collapse=", ")})
+cpg_annotation_custom$Gene_Symbol = do.call(c,allgenes)
+cpg_annotation_custom$Gene_Symbol[cpg_annotation_custom$Gene_Symbol=="NA"]=""
+matching_genes = sapply(tobacco_AMR$CpG_related_info, function(x) {
+  res=cpg_annotation_custom[x,"Gene_Symbol"]
+  unique(res)})
+
+df_table$Genes = matching_genes
+
+df_table$ACME = tobacco_AMR$step2_res[tobacco_AMR$step2_res$feat %in% df_table$AMR, "est"]
+
+table = kable(df_table, row.names = F) %>%
+  column_spec (1:ncol(df_table), border_left = T, border_right = T) %>% 
+  kable_styling()
+
+table 
+save_kable(table, "~/projects/thema_surv/real_data/figures/07_gene_table.pdf")
+```
+
+# Pubmed Scraping
+
+```{r, eval = FALSE}
+# Step1 export a csv with the list of genes
+write.csv(gsub(", ",";",matching_genes), "~/projects/thema_surv/real_data/results/07_genes_hit.csv", row.names = F)
+
+# Step2 run 07_AMR_biology_scraping.py and write 07_genes_hit_pubmed.csv
+
+# Step3 retrieve results and put in the table
+scraping = read.csv2("~/projects/thema_surv/merged_data/results/07_genes_hit_pubmed.csv", sep=",", header = T)[,c(2,3)]
+colnames(scraping) = c("Gene_Symbol","PubmedHit")
+
+df_table$PubmedHit = sapply(matching_genes, function(x) {
+  if (length(strsplit(x,', ')[[1]])==0) {
+    res=""
+  }
+  if (length(strsplit(x,', ')[[1]])==1) {
+    res=unique(scraping$PubmedHit[scraping$Gene_Symbol==x])
+  }
+  if (length(strsplit(x,', ')[[1]])>1) {
+    gene_list = strsplit(x,', ')[[1]]
+    res = sapply(gene_list, function(y) unique(scraping$PubmedHit[scraping$Gene_Symbol==y]))
+    res = paste(res, collapse=', ')
+  }
+  res
+})
+# For gene IMPACT I have to run the search
+# "Humans"[Mesh] AND (pancreatic cancer[MeSH Terms]) AND "IMPACT protein, human"[Supplementary Concept]
+# and manually correct in the table (hits=0)
+df_table$PubmedHit[df_table$Genes=='IMPACT'] = 0
+
+kable(df_table, row.names = F) %>%
+  column_spec (1:ncol(df_table), border_left = T, border_right = T) %>% 
+  kable_styling()
+```
+
+
+
+# Compare level of expression of genes linked to AMR / tobacco
+
+```{r, eval = FALSE}
+
+
+#smoking status
+smoking = ifelse(tcga_data$tobacco==0, 'Non-smoker', 'Smoker')
+names(smoking) = rownames(tcga_data$M)
+ smoking = as.numeric(as.factor(smoking)) -1 # 1 = smoker, 0 - non-smoker
+
+#immune fraction
+immune = datIMM$all
+
+
+tcga_exprs = lapply(matching_genes, function(x) {
+  common_samples = intersect(colnames(tcga_exprs0$data),names(immune))
+  common_genes = intersect(rownames(tcga_exprs0$data),strsplit(x, ", ")[[1]])
+  df = data.frame(tcga_exprs0$data[common_genes, common_samples])
+  if (ncol(df)==1) {df = data.frame(t(df))}
+  rownames(df) = common_genes
+  df
+  })
+
+
+#icgc_exprs0 = t(readRDS("../../thema/results/20241206_realdata_res/proceed_paca_icgc.rds")$trans_matrix)
+
+
+#df = data.frame(Gene=unlist(mget(x = rownames(icgc_exprs0), envir = illuminaHumanv4SYMBOL)))
+#gene_na = is.na(df$Gene)
+#icgc_exprs0 = icgc_exprs0[!gene_na,]
+#df = df[!gene_na,]
+#rownames(icgc_exprs0) = df
+#rm(df)
+#icgc_exprs0 = icgc_exprs0[!duplicated(rownames(icgc_exprs0)),]
+#icgc_exprs = lapply(matching_genes, function(x) {
+ # common_samples = intersect(colnames(icgc_exprs0),names(immune))
+#  common_genes = intersect(rownames(icgc_exprs0),strsplit(x, ", ")[[1]])
+#  df = data.frame(icgc_exprs0[common_genes, common_samples])
+#  if (ncol(df)==1) {df = data.frame(t(df))}
+#  rownames(df) = common_genes
+#  df
+#  })
+
+df_tcga = data.frame(
+  Group1 = cut(immune[grep("TCGA",names(immune))], breaks=2, labels=c('low','high')),
+  Group2 = ifelse(grep("TCGA",names(immune),value=T)%in%names(sort(immune[grep("TCGA",names(immune))])[1:(length(grep("TCGA",names(immune)))/2)]), 'low', 'high'),
+  Smoking = smoking[grep("TCGA",names(immune))],
+  Gene = unlist(lapply(tcga_exprs, rownames)),
+                     Expression = c(as.matrix(do.call(rbind,tcga_exprs))))
+#df_icgc = data.frame(
+#  Group1 = cut(immune[grep("DO",names(immune))], breaks=2, labels=c('low','high')),
+#  Group2 = ifelse(grep("DO",names(immune),value=T)%in%names(sort(immune[grep("DO",names(immune))])[1:(length(grep("DO",names(immune)))/2)]), 'low', 'high'),
+#  Smoking = smoking[grep("DO",names(immune))],
+#  Gene = unlist(lapply(icgc_exprs, rownames)),
+                     Expression = c(as.matrix(do.call(rbind,icgc_exprs))))
+df_immune_AMR = data.frame(
+  Group1 = df_tcga$Group1,
+  Group2 = df_tcga$Group2,
+  Gene = df_tcga$Gene,
+  Expression = df_tcga$Expression,
+  Smoking = df_tcga$Smoking)
+
+ggplot(df_immune_AMR, aes(x=Gene, y=Expression)) +
+  geom_violin(aes(fill=Group2)) +
+  scale_fill_social() +
+  theme_modern()+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggplot(df_immune_AMR, aes(x=Gene, y=Expression)) +
+  geom_violin(aes(fill=as.character(Smoking))) +
+  scale_fill_social() +
+  theme_modern() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+# Filtrer les NA
+df_clean <- df_immune_AMR[!is.na(df_immune_AMR$Smoking), ]
+
+ggplot(df_clean, aes(x = Gene, y = Expression)) +
+  geom_violin(aes(fill = as.character(Smoking))) +
+  scale_fill_social() +
+  theme_modern() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  stat_compare_means(aes(group = Smoking), 
+                     method = "wilcox.test", #instead of t.test 
+                     label = "p.signif", 
+                     hide.ns = TRUE)
+```
+
+# Define interesting AMRs
+
+```{r}
+idx = order(tobacco_AMR$step2_res$est)
+tobacco_AMR$step2_res[idx, ]
+
+#Select a subset, for instance max pval
+n = 6
+idx = order(tobacco_AMR$step2_res$pval)
+interesting_AMR = paste0("AMR", as.numeric(rownames(tobacco_AMR$step2_res)[idx][c(0:(n/2),(length(idx)-(n/2)+1):length(idx))]))
+interesting_AMR = tobacco_AMR$step2_res[idx, ]$feat[1:6]
+
+#Select all
+#interesting_AMR = tobacco_AMR$step2_res$feat
+
+#select serial mediation amr (model without laten factor : woLF)
+#interesting_AMR <- unique(sub("-.*", "", idx_woLF))
+#length(interesting_AMR)
+interesting_AMR = c("AMR4", "AMR9", "AMR14", "AMR15", "AMR17", "AMR34", "AMR40", "AMR43", "AMR46", "AMR50")
+```
+
+
+
+# DMRichR plot
+
+```{r}
+#bed = readRDS("~/projects/datashare/all_human_tissues/bed_grch37_epimeddb.rds")
+#tcga_data = readRDS("~/projects/thema_surv/real_data/results/01_tcga_data_expo_deconv.rds")
+
+# Reproduce DMRichR package plot
+tcga_dna = t(tcga_data$M)
+#pf_meth0 = readRDS("../../datashare/TCGA_PAAD/study_TCGA-PAAD_meth.rds")$platform
+#pf_meth = readRDS("results/03_platform_info_tcga_meth.rds")
+#pf_meth = pf_meth0[rownames(pf_meth),]
+#rm(pf_meth0)
+# For interesting AMRs
+# For long AMRs
+long_AMR = paste0("DMR",c(1,3,5))
+tcga_dna_amr = lapply(interesting_AMR, function(x)
+  tcga_dna[tobacco_AMR$CpG_related_info[[x]],])
+names(tcga_dna_amr) = interesting_AMR
+# convert cg to pos
+tcga_data$probes_info = lapply(tcga_data$probes_info, function(x) {
+  names(x) = colnames(tcga_data$M)
+  x
+})
+
+# convert cg to pos
+smoking = ifelse(tcga_data$tobacco==0, 'Non-smoker', 'Smoker')
+names(smoking) = rownames(tcga_data$M)
+cpg = lapply(tcga_dna_amr, rownames)
+length(unlist(cpg))
+
+cpg_info_table = lapply(cpg, function(x) {
+  res = cpg_annotation[x,]
+  res = res[!duplicated(res$Start),]
+  res = res[!duplicated(res$End),]
+  res
+})
+
+
+pos = lapply(cpg, function(x) cpg_annotation[x,]$Start)
+chr = sapply(cpg, function(x) unique(cpg_annotation[x,]$Chromosome))
+feat_type = mapply(function(x, y) cpg_annotation[cpg_annotation$Start>=min(x) & cpg_annotation$End<=(max(x)+1) & cpg_annotation$Chromosome==y, c("Chromosome","Start","End","Feature_Type")],
+                   pos, chr, SIMPLIFY = F)
+
+
+df_tcga_dna_amr = mapply(function(x,y,name) data.frame("Pos"=x,
+                             "Group"=rep(smoking, each=nrow(y)),
+                             "Patient"=rep(colnames(y), each=nrow(y)),
+                             "Methylation"=c(y),
+                         "AMR" = name ),
+                         pos, tcga_dna_amr,names(pos), SIMPLIFY = F)
+
+### PLOT WITHOUT GENES
+
+# define the function
+
+AMR_plots_without_genes <- ggpubr::ggarrange(
+  plotlist = lapply(df_tcga_dna_amr, function(x) {
+    ggplot(x, aes(x = Pos, y = Methylation, color = Group)) +
+      geom_line(aes(group = Patient), alpha = 0.1) +
+      geom_point() +
+      stat_summary(
+        fun = mean,
+        fun.min = function(y) mean(y) - sd(y),
+        fun.max = function(y) mean(y) + sd(y),
+        geom = "ribbon",
+        aes(fill = Group),
+        alpha = 0.2,
+        color = NA
+      ) +
+      stat_summary(
+        fun = mean,
+        geom = "line",
+        aes(group = Group),
+        linewidth = 1
+      ) +
+      scale_color_social() +
+      scale_fill_social() +
+      xlab("") +
+      theme_modern() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+  }),
+  common.legend = TRUE,
+  labels = paste0(
+  names(pos),
+  ", width = ",
+  sapply(pos, function(p) diff(range(p)))
+  )
+)
+
+#Run AMR_plots_without_genes
+
+lapply(df_tcga_dna_amr, function(x) {
+    ggplot(x, aes(x = Pos, y = Methylation, color = Group)) +
+      geom_line(aes(group = Patient), alpha = 0.1) +
+      geom_point() +
+      stat_summary(
+        fun = mean,
+        fun.min = function(y) mean(y) - sd(y),
+        fun.max = function(y) mean(y) + sd(y),
+        geom = "ribbon",
+        aes(fill = Group),
+        alpha = 0.2,
+        color = NA
+      ) +
+      stat_summary(
+        fun = mean,
+        geom = "line",
+        aes(group = Group),
+        linewidth = 1
+      ) +
+      scale_color_social() +
+      scale_fill_social() +
+      xlab("") +
+      theme_modern() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+})
+
+ggsave("figures/07_AMR_plots_without_genes.pdf",AMR_plots_without_genes, width = 12, height = 8)
+
+### PLOT WITH GENES 
+
+# define the function
+
+x = df_tcga_dna_amr[[4]]
+
+plots <- lapply(df_tcga_dna_amr, function(x) {
+  
+  # For each AMR, get the genes
+  AMR_name <- unique(x$AMR)
+  cur_AMR <- df_table[df_table$AMR == AMR_name, ]
+  if(length(cur_AMR$Genes) > 1) {
+    cur_genes <- unlist(strsplit(cur_AMR$Genes, ", "))
+  }  else {
+    cur_genes <- cur_AMR$Genes
+  }
+  
+  #we choose to keep the first gene if several are associated with the locus
+  gene_annots <- do.call(rbind, lapply(cur_genes[[1]], function(gene) {
+    if (gene != "") {
+      gene_info <- bed[bed$gene_symbol == gene, ]
+      if (nrow(gene_info) > 0) {
+        return(data.frame(
+          gene = gene,
+          tx_start = gene_info$tx_start[1],
+          tx_end = gene_info$tx_end[1],
+          y_min = 1.02,
+          y_max = 1.05
+        ))
+      }
+    }
+    return(NULL)
+  }))
+  
+  # Créer le plot
+  p <- ggplot(x, aes(x = Pos, y = Methylation, color = Group)) +
+    geom_line(aes(group = Patient), alpha = 0.1) +
+
+    geom_point() +
+    stat_summary(
+      fun = mean,
+      fun.min = function(y) mean(y) - sd(y),
+      fun.max = function(y) mean(y) + sd(y),
+      geom = "ribbon",
+      aes(fill = Group),
+      alpha = 0.2,
+      color = NA
+    ) +
+    stat_summary(
+      fun = mean,
+      geom = "line",
+      aes(group = Group),
+      linewidth = 1
+    ) +
+    scale_color_social() +
+    scale_fill_social() +
+    xlab("") +
+    ylim(c(0, 1.1)) +
+    theme_modern()
+  
+  # Ajouter les rectangles de gènes s’ils existent
+  if (!is.null(gene_annots)) {
+    p <- p +
+      geom_rect(data = gene_annots,
+                aes(xmin = tx_start, xmax = tx_end, ymin = y_min, ymax = y_max),
+                fill = "gray30", color = "black", inherit.aes = FALSE) +
+      geom_text(data = gene_annots,
+                aes(x = (tx_start + tx_end) / 2, y = y_max + 0.02, label = gene),
+                size = 3, inherit.aes = FALSE)
+  }
+  
+  return(p)
+})
+
+# Labels (optionnel, à adapter selon ce que représente "chr" et "pos")
+labels_vec <- paste0(
+  names(pos),
+  ", width = ",
+  sapply(pos, function(p) diff(range(p)))
+)
+
+# Assembler les plots
+AMR_plots_with_genes = ggpubr::ggarrange(
+  plotlist = plots,
+  common.legend = TRUE,
+  labels = labels_vec
+)
+AMR_plots_with_genes
+ggsave("figures/07_AMR_plots_with_genes.pdf",AMR_plots_with_genes, width = 12, height = 8)
+
+
+```
+
+# Plot immune vs met for interesting AMRs
+
+```{r}
+colnames(datAMR) <- gsub("^DMR", "AMR", colnames(datAMR))
+
+plot_imm_by_AMR = function(vec, plot_name) {
+  
+amr_ids <- sub("-.*", "", vec)
+cell_types <- sub(".*-", "", vec)
+n_pairs = length(vec)
+
+df <- data.frame(
+  AMR = amr_ids,
+  Cell_Type = cell_types
+)
+
+print(df)
+
+samples <- intersect(rownames(datAMR), rownames(datIMM))  # échantillons communs
+
+# Initialisation
+Sample <- c()
+AMR <- c()
+Cell_Type <- c()
+AMR_Value <- c()
+Cell_Prop <- c()
+
+# Boucle sur les paires DMR / Cell_Type à tracer
+for (i in 1:nrow(df)) {
+  print(i)
+  amr <- df$AMR[i]
+  cell <- df$Cell_Type[i]
+  
+  # Vérifie que les colonnes existent dans datAMR et datIMM
+  if (!(amr %in% colnames(datAMR))) next
+     print(amr)
+  if (!(cell %in% colnames(datIMM))) next
+    print(cell)
+  
+  for (s in samples) {
+    Sample <- c(Sample, s)
+    AMR <- c(AMR, amr)
+    Cell_Type <- c(Cell_Type, cell)
+    AMR_Value <- c(AMR_Value, datAMR[s, amr])
+    Cell_Prop <- c(Cell_Prop, datIMM[s, cell])
+  }
+}
+
+# Créer le tableau final
+df_plot <- data.frame(Sample, AMR, Cell_Type, AMR_Value, Cell_Prop, stringsAsFactors = FALSE)
+labels = smoking[rownames(datAMR)]
+df_plot$Smoking_Status <- labels[df_plot$Sample]
+
+# Créer une colonne unique pour chaque paire
+df_plot$Pair <- paste(df_plot$AMR, df_plot$Cell_Type, sep = " - ")
+pairs <- unique(df_plot$Pair)
+cor_data <- data.frame(Pair = pairs, cor_val = NA)
+
+groups <- unique(df_plot[, c("Pair", "Smoking_Status")])
+cor_data <- data.frame(Pair = character(), Smoking_Status = character(), cor_val = numeric())
+
+for (i in seq_len(nrow(groups))) {
+  sub <- df_plot[df_plot$Pair == groups$Pair[i] & df_plot$Smoking_Status == groups$Smoking_Status[i], ]
+  
+  # Corrélation uniquement si assez de points
+  if (nrow(sub) > 2) {
+    r <- round(cor(sub$AMR_Value, sub$Cell_Prop), 2)
+  } else {
+    r <- NA
+  }
+  
+  cor_data <- rbind(cor_data, data.frame(Pair = groups$Pair[i], Smoking_Status = groups$Smoking_Status[i], cor_val = r))
+}
+
+
+
+
+#for (i in seq_along(pairs)) {
+#  sub <- df_plot[df_plot$Pair == pairs[i], ]
+#  cor_data$cor_val[i] <- round(cor(sub$AMR_Value, sub$Cell_Prop), 2)
+#}
+
+
+
+cor_data$y_pos <- ifelse(cor_data$Smoking_Status == "Smoker", -Inf, +0.02)
+
+ggplot(df_plot, aes(x = AMR_Value, y = Cell_Prop, color = Smoking_Status)) +
+  geom_point(alpha = 0.7, size = 2) +
+  geom_smooth(method = "lm", se = FALSE) +  # <-- ici : une ligne par groupe
+  facet_wrap(~ Pair, scales = "free") +
+  scale_x_continuous(limits = c(0, 1)) +
+ # scale_y_continuous(limits = c(0, 0.2)) +
+   scale_color_manual(values = c("Non-smoker" = "blue", "Smoker" = "red")) + 
+  theme_minimal() +
+  theme(legend.position = "top") +
+  labs(
+    title = "Scatter plot AMR vs proportion cellulaire (par paires spécifiques)",
+    x = "Valeur AMR",
+    y = "Proportion cellulaire",
+    color = "Smoking Status"
+  ) #+
+ # geom_text(
+  #data = cor_data,
+  #aes(x = Inf, y = y_pos, label = paste0("r = ", cor_val), color = Smoking_Status),
+  #inherit.aes = FALSE,
+  #hjust = 1.1, vjust = -0.5,
+  #size = 4
+#)
+
+
+  #geom_text(data = cor_data, aes(x = Inf, y = -Inf, label = paste0("r = ", cor_val)),
+   #         inherit.aes = FALSE,
+    #        hjust = 1.1, vjust = -0.5,
+     #       size = 4, color = "black")
+
+
+ggsave(plot_name, width = 10, height = 7, units = "in", dpi = 300)
+
+}
+#posCDS = readRDS("~/projects/thema_surv_perso/real_data/results/05_posAMR_CDS.rds")
+vec = idx_woLF
+plot_name = "figures/07_idx_woLF_AMR_immune_plot.pdf"
+plot_imm_by_AMR(vec, plot_name)
+
+
+
+vec = c("AMR15-all",      "AMR34-all",           "AMR46-all",  
+        "AMR4-NK",
+        "AMR17-NK",
+        "AMR34-NK")
+plot_name = "figures/07_top_serial_AMR_immune_plot.pdf"
+plot_imm_by_AMR(vec, plot_name)
+
+```
+
+```{r}
+#check AMR values à partir de la table de florence
+head(datAMR[,46])
+
+# Calcul à partir de la fonciton d'Elise
+df_tcga_dna_amr$AMR46$Methylation <- as.numeric(df_tcga_dna_amr$AMR46$Methylation)
+mean_by_patient <- aggregate(Methylation ~ Patient, data = df_tcga_dna_amr$AMR46, FUN = mean)
+head(mean_by_patient)
+head(datAMR[,4])
+
+# Calcul à la main à partir de la matrice de methylation
+#get cpg name for AMR4
+amr46_p = df_table["AMR46", 4]
+ids_vector <- strsplit(amr46_p , ",\\s*")[[1]]
+tmp = tcga_data$M[,ids_vector]
+head(rowMeans(tmp))
+```
+
+# Genecards of interesting genes
+## Step1 open all URLS with 07_AMR_biology_scraping.py
+## Step2 look manually (cannot scrap genecards)

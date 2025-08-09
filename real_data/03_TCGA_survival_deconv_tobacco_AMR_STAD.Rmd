@@ -1,0 +1,399 @@
+---
+title: "mediation with AMR Data"
+output: html_document
+date: "2025-01-27"
+---
+
+Identify Aggregated Methylated Regions (AMR) with `AMR_search` function which uses the P-values from the max-squared test computed with the `run_AS` function and using a adapted comb-p method (comb-p is a tool that manipulates BED files of possibly irregularly spaced P-values and calculates auto-correlation, combines adjacent P-values, performs false discovery adjustment, finds regions of enrichment and assigns significance to those regions). AMR identification could be useful in EWAS when single CpG mediation is unsuccessful, or could be a complementary analysis.
+
+seed = FDR significance threshold for initial selection of AMR region
+
+```{r init}
+library(survival)
+library(ggplot2)
+library(epimedtools)
+source("surv_parametric_alternative.R")
+source("helper_functions.R")
+source("surv_aalen_alternative.R")
+set.seed(123)
+```
+
+# TCGA data V2 K8 corrected
+
+```{r load4}
+med_tobacco_dnam = readRDS("results/02_tcga_med_tobacco_dnam_V2_K8_corrected.rds")
+data_tcga = readRDS("results/01_tcga_data_expo_deconv.rds")
+```
+
+# TCGA AMR mediation
+## Tobacco -> DNAm
+# 2 cpg min
+### seed = 0.05
+
+```{r tobacco DNAm AMR V2 K8, message=FALSE, eval=TRUE}
+######################
+#AMR research
+######################
+pf_meth = data.frame("Chromosome"=data_tcga$probes_info$CHR,
+                     "Start"=data_tcga$probes_info$BP,
+                     "End"=data_tcga$probes_info$End,
+                     "Gene_Symbol"=data_tcga$probes_info$Gene_Symbol)
+rownames(pf_meth) = colnames(data_tcga$M)
+saveRDS(pf_meth, "results/03_platform_info_tcga_meth.rds")
+pf_meth = readRDS("results/03_platform_info_tcga_meth.rds")
+
+# hist(med_tobacco_dnam$hdmax2_step1_param$max2_pvalues)
+# hist(qnorm(med_tobacco_dnam$hdmax2_step1_param$max2_pvalues))
+
+# AMR resaerch
+res.amr_search = AMR_search(chr = pf_meth$Chromosome,
+                                    start = pf_meth$Start,
+                                    end = pf_meth$End,
+                                    pval = med_tobacco_dnam$hdmax2_step1_param$max2_pvalues,
+                                    cpg = rownames(pf_meth),
+                                    seed = 0.05, 
+                                    nCores = 1)
+
+res.amr_build = AMR_build(res.amr_search,
+                                  methylation = data_tcga$M, 
+                                  nb_cpg = 2)
+
+# total AMR
+m = as.matrix(res.amr_build$AMR_mean)
+
+saveRDS(m, "results/03_tcga_mean_meth_AMR_fdr0_05_V2_K8_corrected.rds")
+saveRDS(res.amr_build, "results/03_tcga_tobacco_AMR_fdr0_05_V2_K8_corrected.rds")
+
+# top 50 AMR (most significative according to combp pval)
+res = res.amr_build$res
+mean_meth = res.amr_build$AMR_mean
+cpg_related = res.amr_build$CpG_for_each_AMR
+order_AMR = res[order(res.amr_build$res$p),]
+top_50_AMR = order_AMR[1:50,]
+mean_meth_50 = mean_meth[,top_50_AMR$AMR]
+cpg_related_50 = cpg_related[top_50_AMR$AMR]
+rownames(mean_meth_50) = rownames(data_tcga$M)
+
+# # save amr built results and methylation matrix for top 50
+# res_50 = list(cpg_related_50 = cpg_related_50, top_50_AMR_res = top_50_AMR, mean_meth_50 = mean_meth_50)
+# saveRDS(res_50 , "results/03_tcga_top50_tobacco_AMR_fdr0_05_V2_K5.rds")
+
+rownames(m) = rownames(data_tcga$M)
+mean_meth_50 = as.matrix(mean_meth_50)
+
+## selected mediators effects estimation
+hdmax2_step2 = estimate_effect_surv_param(object = med_tobacco_dnam$hdmax2_step1_param, m = mean_meth_50)
+acme = hdmax2_step2$effects$univariate$ACME
+significative_AMR_acme = acme[which(acme$pval<=0.05),]
+mean_meth_significative = m[, significative_AMR_acme$feat]
+saveRDS(mean_meth_significative, "results/03_tcga_significative_from_top50_mean_meth_AMR_fdr0_05_V2_K8_corrected.rds")
+
+AMR_info = res.amr_build$res
+CpG_related_info = res.amr_build$CpG_for_each_AMR
+CpG_related_info_significative = res.amr_build$CpG_for_each_AMR[AMR_info$AMR %in% significative_AMR_acme$feat]
+significative_AMR_info = AMR_info[AMR_info$AMR %in% significative_AMR_acme$feat,]
+
+res_50 = list(all_step2_res = hdmax2_step2,
+              step2_res_50 = acme,
+              AMR_info_50  = AMR_info[AMR_info$AMR %in% top_50_AMR$AMR,],
+              cpg_related_50 = cpg_related_50,
+              mean_meth_mat = mean_meth_50)
+saveRDS(res_50, "results/03_tcga_top50_tobacco_AMR_fdr0_05_V2_K8_corrected.rds")
+
+res = list(
+  step2_res = significative_AMR_acme,
+  AMR_info = significative_AMR_info,
+  CpG_related_info = CpG_related_info_significative
+)
+
+saveRDS(res, "results/03_tcga_significative_from_top50_tobacco_AMR_fdr0_05_V2_K8_corrected.rds")
+
+# for causal direction analyses (Nelle)
+write.csv(mean_meth_50, "results/03_tcga_AMR_mean_meth_top50_fdr0_05_V2_K8_corrected.csv")
+
+write.csv(mean_meth_significative, "results/03_tcga_AMR_mean_meth_significative_fdr0_05_V2_K8_corrected.csv")
+
+X_deconv = data_tcga$X_deconv$Consensus
+immune_cells = c("Macrophages","B cells", "T cells", "NK","DCs")
+X_immune = X_deconv[rownames(X_deconv) %in% immune_cells,]
+X_immune = t(X_immune)
+
+write.csv(X_immune, "results/03_tcga_consensus_deconv_immune_cells.csv")
+# test = read.csv("results/tcga_consensus_deconv_immune_cells.csv")
+# test2 = read.csv("results/03_tcga_AMR_mean_meth_top50_fdr0_05_V2_K8_corrected.csv")
+```
+
+_______________________________________________________________________
+
+# TCGA data V2 K5 aalen model
+
+```{r load4, eval = FALSE}
+
+med_tobacco_dnam = readRDS("results/02_tcga_med_tobacco_dnam_aalen_V2_K8.rds")
+data_tcga = readRDS("results/01_tcga_data_expo_deconv.rds")
+
+```
+
+# TCGA AMR mediation
+## Tobacco -> DNAm
+# 2 cpg min
+### seed = 0.05
+```{r tobacco DNAm AMR V2 K5, message=FALSE, eval=FALSE}
+set.seed(123)
+######################
+#AMR research
+######################
+probes_end = readRDS("../../datashare/TCGA_PAAD/study_TCGA-PAAD_meth.rds")$platform
+probes_end = probes_end[colnames(data_tcga$M),]$End
+pf_meth = data.frame("Chromosome"=data_tcga$probes_info$CHR,
+                    "Start"=data_tcga$probes_info$BP,
+                    "End"=probes_end,
+                    "Gene_Symbol"=data_tcga$probes_info$Gene_Symbol)
+rownames(pf_meth) = colnames(data_tcga$M)
+saveRDS(pf_meth, "results/03_platform_info_tcga_meth.rds")
+pf_meth = readRDS("results/03_platform_info_tcga_meth.rds")
+
+hist(med_tobacco_dnam$hdmax2_step1_param$max2_pvalues)
+hist(qnorm(med_tobacco_dnam$hdmax2_step1_param$max2_pvalues))
+# AMR resaerch
+res.amr_search = hdmax2::AMR_search(chr = pf_meth$Chromosome,
+                                    start = pf_meth$Start,
+                                    end = pf_meth$End,
+                                    pval = med_tobacco_dnam$hdmax2_step1_param$max2_pvalues,
+                                    cpg = rownames(pf_meth),
+                                    seed = 0.05, 
+                                    nCores = 1,
+                                    dist.cutoff = 3000,
+                                    bin.size = 1500)
+
+
+res.amr_search = AMR_search(chr = pf_meth$Chromosome,
+                                    start = pf_meth$Start,
+                                    end = pf_meth$End,
+                                    pval = med_tobacco_dnam$hdmax2_step1_param$max2_pvalues,
+                                    cpg = rownames(pf_meth),
+                                    seed = 0.2, 
+                                    nCores = 1)
+
+res.amr_build = hdmax2::AMR_build(res.amr_search,
+                                  methylation = data_tcga$M, 
+                                  nb_cpg = 2)
+
+# total AMR
+m = as.matrix(res.amr_build$AMR_mean)
+
+saveRDS(m, "results/03_tcga_mean_meth_AMR_fdr0_05_aalen_V2_K5.rds")
+saveRDS(res.amr_build, "results/03_tcga_tobacco_AMR_fdr0_05_aalen_V2_K5.rds")
+
+# top 50 AMR (most significative according to combp pval)
+res = res.amr_build$res
+mean_meth = res.amr_build$AMR_mean
+cpg_related = res.amr_build$CpG_for_each_AMR
+order_AMR = res[order(res.amr_build$res$p),]
+top_50_AMR = order_AMR[1:50,]
+mean_meth_50 = mean_meth[,top_50_AMR$AMR]
+cpg_related_50 = cpg_related[top_50_AMR$AMR]
+rownames(mean_meth_50) = rownames(data_tcga$M)
+
+# # save amr built results and methylation matrix for top 50
+# res_50 = list(cpg_related_50 = cpg_related_50, top_50_AMR_res = top_50_AMR, mean_meth_50 = mean_meth_50)
+# saveRDS(res_50 , "results/03_tcga_top50_tobacco_AMR_fdr0_05_V2_K5.rds")
+
+rownames(m) = rownames(data_tcga$M)
+mean_meth_50 = as.matrix(mean_meth_50)
+
+## selected mediators effects estimation
+hdmax2_step2 = estimate_effect_surv_param(object = med_tobacco_dnam$hdmax2_step1_param, m = mean_meth_50)
+acme = hdmax2_step2$effects$univariate$ACME
+significative_AMR_acme = acme[which(acme$pval<=0.05),]
+mean_meth_significative = m[, significative_AMR_acme$feat]
+saveRDS(mean_meth_significative, "results/03_tcga_significative_from_top50_mean_meth_AMR_fdr0_05_aalen_V2_K5.rds")
+
+AMR_info = res.amr_build$res
+CpG_related_info = res.amr_build$CpG_for_each_AMR
+CpG_related_info_significative = res.amr_build$CpG_for_each_AMR[AMR_info$AMR %in% significative_AMR_acme$feat]
+significative_AMR_info = AMR_info[AMR_info$AMR %in% significative_AMR_acme$feat,]
+
+res_50 = list(step2_res_50 = acme,
+              AMR_info_50  = AMR_info,
+              cpg_related_50 = cpg_related_50,
+              mean_meth_50 =mean_meth_50)
+saveRDS(res_50, "results/03_tcga_top50_tobacco_AMR_fdr0_05_aalen_V2_K5.rds")
+
+res = list(
+  step2_res = significative_AMR_acme,
+  AMR_info = significative_AMR_info,
+  CpG_related_info = CpG_related_info_significative
+)
+saveRDS(res, "results/03_tcga_significative_from_top50_tobacco_AMR_fdr0_05_aalen_V2_K5.rds")
+
+# # for causal direction analyses (Nelle)
+# write.csv(mean_meth_50, "results/tcga_AMR_mean_meth_top50.csv")
+# 
+# write.csv(mean_meth_significative, "results/tcga_AMR_mean_meth_significative.csv")
+# 
+# X_deconv = data_tcga$X_deconv$Consensus
+# immune_cells = c("Macrophages","B cells", "T cells", "NK","DCs")
+# X_immune = X_deconv[rownames(X_deconv) %in% immune_cells,]
+# X_immune = t(X_immune)
+# 
+# write.csv(X_immune, "results/tcga_consensus_deconv_immune_cells.csv")
+# test = read.csv("results/tcga_consensus_deconv_immune_cells.csv")
+# test2 = read.csv("results/tcga_AMR_mean_meth_significative.csv")
+```
+
+
+
+
+
+
+# Transfer to BRCA
+
+```{r BRCA AMR validation, eval=FALSE}
+# Load BRCA data
+data_brca <- readRDS("~/Datas/projects/datashare/study_TCGA-BRCA_meth.rds")
+pdac_top_50_AMR = readRDS("results/03_tcga_top50_tobacco_AMR_fdr0_05_V2_K8_corrected.rds")
+meth_brca = data_brca$data
+AMR_list = pdac_top_50_AMR$cpg_related_50
+AMR_probes <- unlist(AMR_list)
+
+# Add probes names
+names(AMR_probes) <- AMR_probes
+AMR_probes <- setNames(rep(names(AMR_list), lengths(AMR_list)), unlist(AMR_list))
+selected_rows <- intersect(rownames(meth_brca), names(AMR_probes))
+meth_selected <- meth_brca[selected_rows, , drop = FALSE]
+AMR_labels <- AMR_probes[selected_rows]
+AMR_meth_means <- apply(meth_selected, 2, function(sample) tapply(sample, AMR_labels, mean))
+
+saveRDS(AMR_meth_means, "results/03_brca_AMR_meth_mean.rds")
+
+source("surv_parametric.R")
+brca_AMR_meth_means = readRDS("results/03_brca_AMR_meth_mean.rds")
+icgc_res_med_cpg = readRDS("results/02_brca_med_tobacco_dnam.rds")
+
+hdmax2_step2 = estimate_effect_surv_param(icgc_res_med_cpg$hdmax2_step1_param, m = t(icgc_AMR_meth_means))
+
+saveRDS(hdmax2_step2, "results/03_brca_med_AMR_estimate_effect.rds")
+```
+# TCGA data HIMA
+
+```{r load4, eval=FALSE}
+
+med_tobacco_dnam = readRDS("results/02_tcga_med_tobacco_dnam_hima.rds")
+data_tcga = readRDS("results/01_tcga_data_expo_deconv.rds")
+
+```
+
+# TCGA AMR mediation
+## Tobacco -> DNAm
+
+```{r tobacco DNAm AMR , message=FALSE, eval=FALSE}
+set.seed(123)
+######################
+#AMR research
+######################
+probes_end = readRDS("../../datashare/TCGA_PAAD/study_TCGA-PAAD_meth.rds")$platform
+probes_end = probes_end[colnames(data_tcga$M),]$End
+pf_meth = data.frame("Chromosome"=data_tcga$probes_info$CHR,
+                    "Start"=data_tcga$probes_info$BP,
+                    "End"=probes_end,
+                    "Gene_Symbol"=data_tcga$probes_info$Gene_Symbol)
+rownames(pf_meth) = colnames(data_tcga$M)
+saveRDS(pf_meth, "results/03_platform_info_tcga_meth.rds")
+pf_meth = readRDS("results/03_platform_info_tcga_meth.rds")
+pval = med_tobacco_dnam$hdmax2_step1_hima$pvalue_SIS
+colnames(pval) = colnames(data_tcga$M)
+pval = t(pval)
+#pval = as.vector(pval)
+#hist(med_tobacco_dnam$hdmax2_step1_hima$pvalue_SIS)
+#hist(qnorm(med_tobacco_dnam$hdmax2_step1_param$max2_pvalues))
+# AMR resaerch
+
+source("helper_functions.R")
+res.amr_search = AMR_search(chr = pf_meth$Chromosome,
+                                    start = pf_meth$Start,
+                                    end = pf_meth$End,
+                                    pval = pval,
+                                    cpg = rownames(pf_meth),
+                                    seed = 0.05, 
+                                    nCores = 1)
+
+res.amr_build = hdmax2::AMR_build(res.amr_search,
+                                  methylation = data_tcga$M, 
+                                  nb_cpg = 8)
+
+
+
+
+m = as.matrix(res.amr_build$AMR_mean)
+
+saveRDS(m, "results/03_tcga_mean_meth_AMR_fdr0_05_hima.rds")
+saveRDS(res.amr_build, "results/03_tcga_tobacco_AMR_fdr0_05_hima.rds")
+
+# top 50 AMR (most significative according to combp pval)
+res = res.amr_build$res
+mean_meth = res.amr_build$AMR_mean
+cpg_related = res.amr_build$CpG_for_each_AMR
+order_AMR = res[order(res.amr_build$res$p),]
+top_50_AMR = order_AMR[1:50,]
+mean_meth_50 = mean_meth[,top_50_AMR$AMR]
+cpg_related_50 = cpg_related[top_50_AMR$AMR]
+rownames(mean_meth_50) = rownames(data_tcga$M)
+
+# # save amr built results and methylation matrix for top 50
+# res_50 = list(cpg_related_50 = cpg_related_50, top_50_AMR_res = top_50_AMR, mean_meth_50 = mean_meth_50)
+# saveRDS(res_50 , "results/03_tcga_top50_tobacco_AMR_fdr0_05_V2_K5.rds")
+
+rownames(m) = rownames(data_tcga$M)
+mean_meth_50 = as.matrix(mean_meth_50)
+
+for (i in 1:50){
+  cpg_related_50[i]=cpg_related[i]
+}
+
+cpg_top50_AMR_hima = unlist(cpg_related_50, use.names = FALSE)
+
+
+cpg_top50_AMR_param = unlist(param$CpG_related_info, use.names = FALSE)
+
+res_inter = intersect(cpg_top50_AMR_param, cpg_top50_AMR_hima)
+
+```
+
+
+
+# Transfer to ICGC
+
+```{r icgc AMR validation, eval=FALSE}
+# Load ICGC PDAC data
+data_icgc <- readRDS("results/old_version_parameters/01_icgc_data_expo_deconv.rds")
+
+TCGA_significative_AMR = readRDS("results/03_tcga_significative_from_top50_tobacco_AMR_fdr0_05_V2_K8_corrected.rds")
+
+TCGA_top50_AMR = readRDS("results/03_tcga_top50_tobacco_AMR_fdr0_05_V2_K8_corrected.rds")
+
+AMR_list = TCGA_top50_AMR$cpg_related_50
+TCGA_top50_AMR_probes <- unlist(AMR_list)
+
+# Add probes names
+names(AMR_probes) <- TCGA_top50_AMR_probes
+AMR_probes <- setNames(rep(names(AMR_list), lengths(AMR_list)), unlist(AMR_list))
+selected_rows <- intersect(rownames(t(data_icgc$M)), names(AMR_probes))
+meth_selected <- t(data_icgc$M)[selected_rows, , drop = FALSE]
+AMR_labels <- AMR_probes[selected_rows]
+AMR_meth_means <- apply(meth_selected, 2, function(sample) tapply(sample, AMR_labels, mean))
+
+saveRDS(AMR_meth_means, "results/03_icgc_tcgatop50AMR_meth_mean.rds")
+
+source("surv_parametric.R")
+icgc_AMR_meth_means = readRDS("results/03_icgc_tcgatop50AMR_meth_mean.rds")
+icgc_res_med_cpg = readRDS("results/02_icgc_med_tobacco_dnam_V2_K8_corrected.rds")
+dim(icgc_res_med_cpg$m_param)
+dim(icgc_AMR_meth_means)
+t_icgc_AMR_meth_means = t(icgc_AMR_meth_means[, rownames(icgc_res_med_cpg$m_param)])
+dim(t_icgc_AMR_meth_means)
+hdmax2_step2 = estimate_effect_surv_param(icgc_res_med_cpg$hdmax2_step1_param, m = t_icgc_AMR_meth_means)
+
+saveRDS(hdmax2_step2, "results/03_icgc_med_AMR_estimate_effect.rds")
+```
+

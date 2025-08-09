@@ -1,0 +1,1050 @@
+import json
+import os
+
+s = list(range(9))
+#s = [0,1,2,4,5]
+
+f1ScoreEnabled = True
+step2Enabled = True
+amrSearchEnabled = False
+durationsEnabled = True
+variables = 3
+
+# data generation parameters
+
+#nb_causal_probes = ["40"]#, "100", "400"]
+nb_causal_probes = ["100"]
+n = ["150", "300"]
+#n = ["150"]
+p = ["10000"]
+#p = ["1000"]
+## effects/correlation
+rho = ["0.5"]
+
+#rho = ["0"]
+
+causal_probes_overlap = ["0.8"]
+#causal_probes_overlap = ["0.5","0.8","1"]
+#causal_probes_overlap = ["0.8","1"]
+#mean_A = ["0.05", "0.1", "0.5", "2", "5"]
+mean_A = ["0.01","0.05","0.5", "2", "5"]
+#mean_A = ["0"]
+
+# sd_A = ["0.1", "0.3", "0.5"]
+mean_B = ["0.001","0.01","0.05","0.5", "2", "5"]
+#mean_B = ["0.05","0.5", "5"]
+#mean_B = ["0"]
+
+# sd_B = ["0.1", "0.3", "0.5"]
+sd_A = ["0.1"]
+sd_B = ["0.1"]
+
+
+
+#sd_B = ["0"]
+
+lambda_time = ["0.1"] 
+
+## model
+model = ["aalen", "param", "hima"]
+
+#model=["param"]
+method = ["hdmax2p", "hdmax2a", "hima"]
+#method=["hdmax2p"]
+
+# root directory
+prefix = os.getcwd() + "/v2-03"
+
+# F1 score aggregate
+template2VarsGroups = [
+    #'{"template":"p_1000_n_500_pcp_{nb_causal_probes}_mA_{mean_A}_mB_2_sA_0.5_sB_0.5_ro_0.5", "param1":"nb_causal_probes", "param2":"mean_A"}'#,
+    #'{"template":"p_1000_n_500_pcp_{nb_causal_probes}_mA_2_mB_{mean_B}_sA_0.5_sB_0.5_ro_0.5", "param1":"nb_causal_probes", "param2":"mean_B"}',
+    #'{"template":"p_1000_n_500_pcp_40_mA_{mean_A}_mB_{mean_B}_sA_0.5_sB_0.5_ro_0.5", "param1":"mean_A", "param2":"mean_B"}',
+    # '{"template":"p_1000_n_500_pcp_80_mA_{mean_A}_mB_{mean_B}_sA_0.5_sB_0.5_ro_0.5", "param1":"mean_A", "param2":"mean_B"}',
+    # '{"template":"p_1000_n_500_pcp_160_mA_{mean_A}_mB_{mean_B}_sA_0.5_sB_0.5_ro_0.5", "param1":"mean_A", "param2":"mean_B"}',
+    # '{"template":"p_1000_n_500_pcp_40_mA_1_mB_1_sA_{sd_A}_sB_{sd_B}_ro_0.5", "param1":"sd_A", "param2":"sd_B"}',
+    # '{"template":"p_1000_n_500_pcp_80_mA_1_mB_1_sA_{sd_A}_sB_{sd_B}_ro_0.5", "param1":"sd_A", "param2":"sd_B"}',
+    # '{"template":"p_1000_n_500_pcp_160_mA_1_mB_1_sA_{sd_A}_sB_{sd_B}_ro_0.5", "param1":"sd_A", "param2":"sd_B"}'#,
+    #'{"template":"p_1000_n_200_pcp_{nb_causal_probes}_mA_{mean_A}_mB_2_sA_0.5_sB_0.5_ro_0.5", "param1":"nb_causal_probes", "param2":"mean_A"}'#,
+    #'{"template":"p_1000_n_200_pcp_{nb_causal_probes}_mA_2_mB_{mean_B}_sA_0.5_sB_0.5_ro_0.5", "param1":"nb_causal_probes", "param2":"mean_B"}'#,
+    # '{"template":"p_800_n_200_pcp_{nb_causal_probes}_mA_{mean_A}_mB_0.8_sA_0.1_sB_0.1_ro_0.5", "param1":"nb_causal_probes", "param2":"mean_A"}',
+    # '{"template":"p_500_n_200_pcp_{nb_causal_probes}_mA_{mean_A}_mB_0.8_sA_0.1_sB_0.1_ro_0.5", "param1":"nb_causal_probes", "param2":"mean_A"}',
+    # '{"template":"p_800_n_200_pcp_{nb_causal_probes}_mA_0.8_mB_{mean_B}_sA_0.1_sB_0.1_ro_0.5", "param1":"nb_causal_probes", "param2":"mean_B"}',
+    # '{"template":"p_500_n_200_pcp_{nb_causal_probes}_mA_0.8_mB_{mean_B}_sA_0.1_sB_0.1_ro_0.5", "param1":"nb_causal_probes", "param2":"mean_B"}',
+    # '{"template":"p_800_n_200_pcp_{nb_causal_probes}_mA_0.8_mB_0.8_sA_{sd_A}_sB_0.1_ro_0.5", "param1":"nb_causal_probes", "param2":"sd_A"}',
+    # '{"template":"p_500_n_200_pcp_{nb_causal_probes}_mA_0.8_mB_0.8_sA_{sd_A}_sB_0.1_ro_0.5", "param1":"nb_causal_probes", "param2":"sd_A"}',
+    # '{"template":"p_800_n_200_pcp_{nb_causal_probes}_mA_0.8_mB_0.8_sA_0.1_sB_{sd_B}_ro_0.5", "param1":"nb_causal_probes", "param2":"sd_B"}',
+    # '{"template":"p_500_n_200_pcp_{nb_causal_probes}_mA_0.8_mB_0.8_sA_0.1_sB_{sd_B}_ro_0.5", "param1":"nb_causal_probes", "param2":"sd_B"}',
+    # '{"template":"p_500_n_200_pcp_{nb_causal_probes}_mA_{mean_A}_mB_2_sA_0.5_sB_0.5_ro_0.5", "param1":"nb_causal_probes", "param2":"mean_A"}',
+    # '{"template":"p_500_n_200_pcp_{nb_causal_probes}_mA_2_mB_{mean_B}_sA_0.5_sB_0.5_ro_0.5", "param1":"nb_causal_probes", "param2":"mean_B"}'
+    # '{"template":"p_500_n_200_pcp_{nb_causal_probes}_mA_2_mB_2_sA_{sd_A}_sB_0.5_ro_0.5", "param1":"nb_causal_probes", "param2":"sd_A"}',
+    # '{"template":"p_500_n_200_pcp_{nb_causal_probes}_mA_2_mB_2_sA_0.5_sB_{sd_B}_ro_0.5", "param1":"nb_causal_probes", "param2":"sd_B"}'
+    # '{"template":"p_500_n_200_pcp_{nb_causal_probes}_mA_{mean_A}_mB_5_sA_0.5_sB_0.5_ro_0.5", "param1":"nb_causal_probes", "param2":"mean_A"}',
+    # '{"template":"p_500_n_200_pcp_{nb_causal_probes}_mA_2_mB_2_sA_0.5_sB_0.5_ro_0.5", "param1":"nb_causal_probes", "param2":"mean_B"}'
+    # '{"template":"p_10000_n_{n}_pcp_{nb_causal_probes}_mA_2_mB_2_sA_0.1_sB_0.1_ro_0.5_overlap_0.8", "param1":"n", "param2":"nb_causal_probes"}'
+    # '{"template":"p_1000_n_150_pcp_40_mA_{mean_A}_mB_{mean_B}_sA_0.1_sB_0.1_ro_0.5_overlap_0.8_lambda_0.1", "param1":"mean_A", "param2":"mean_B"}'
+    # '{"template":"p_10000_n_150_pcp_{nb_causal_probes}_mA_2_mB_2_sA_0.1_sB_0.1_ro_0.5_overlap_{causal_probes_overlap}_lambda_0.1", "param1":"nb_causal_probes", "param2":"causal_probes_overlap"}'
+
+]
+
+template3VarsGroups = [
+    #'{"template":"p_500_n_{n}_pcp_40_mA_{mean_A}_mB_{mean_B}_sA_0.1_sB_0.1_ro_0.5", "param1":"mean_A", "param2":"mean_B", "param3":"n"}'#,
+    #'{"template":"p_10000_n_{n}_pcp_40_mA_{mean_A}_mB_{mean_B}_sA_0.1_sB_0.1_ro_0.5", "param1":"mean_A", "param2":"mean_B", "param3":"n"}'#,
+    #'{"template":"p_1000_n_{n}_pcp_40_mA_{mean_A}_mB_{mean_B}_sA_0.1_sB_0.1_ro_0.5", "param1":"mean_A", "param2":"mean_B", "param3":"n"}'#,
+    #'{"template":"p_1000_n_{n}_pcp_80_mA_{mean_A}_mB_{mean_B}_sA_0.1_sB_0.1_ro_0.5", "param1":"mean_A", "param2":"mean_B", "param3":"n"}'#,
+    #'{"template":"p_10000_n_{n}_pcp_{nb_causal_probes}_mA_2_mB_2_sA_0.1_sB_0.1_ro_0.5_overlap_{causal_probes_overlap}", "param1":"n", "param2":"nb_causal_probes", "param3":"causal_probes_overlap"}',
+    #'{"template":"p_10000_n_150_pcp_40_mA_{mean_A}_mB_{mean_B}_sA_0.1_sB_0.1_ro_0.5_overlap_0.8_lambda_{lambda_time}", "param1":"mean_A", "param2":"mean_B", "param3":"lambda_time"}'
+    #'{"template":"p_10000_n_150_pcp_{nb_causal_probes}_mA_2_mB_2_sA_0.1_sB_0.1_ro_0.5_overlap_{causal_probes_overlap}_lambda_{lambda_time}", "param1":"lambda_time", "param2":"nb_causal_probes", "param3":"causal_probes_overlap"}'
+    '{"template":"p_10000_n_{n}_pcp_100_mA_{mean_A}_mB_{mean_B}_sA_0.1_sB_0.1_ro_0.5_overlap_0.8_lambda_0.1", "param1":"mean_A", "param2":"mean_B", "param3":"n"}'
+
+]
+
+
+##############
+## Rule ALL
+##############
+def allRule(wc):
+    groups = expand("{groups}",groups=(template2VarsGroups if variables == 2 else template3VarsGroups))
+    result = []
+
+    for groupStr in groups:
+        group = json.loads(groupStr)
+        template_suffix = group["template"].replace("{","").replace("}","")
+        param1 = group["param1"]
+        param2 = group["param2"]
+
+        if f1ScoreEnabled and variables == 2:
+            result.append(f"{prefix}/plots/{param1}_{param2}_{template_suffix}_global.pdf")
+
+        if f1ScoreEnabled and variables == 3:  # and len(method)==2:
+            param3 = group["param3"]
+            result.append(f"{prefix}/plots/{param1}_{param2}_{param3}_{template_suffix}_step1_global.pdf")
+
+        # if f1ScoreEnabled and variables == 3 and len(method)==3:
+        #    param3=group["param3"]
+        #    result.append(f"{prefix}/csv/{param1}_{param2}_{param3}_{template_suffix}_aggregated_results.csv")
+
+        # if variables == 3:
+        #     param3 = group["param3"]
+        #     result.append(f"{prefix}/plots/{param1}_{param2}_{param3}_{template_suffix}_step1_comparison.pdf")
+
+        if step2Enabled and variables == 2:
+            result.append(f"{prefix}/plots/{param1}_{param2}_{template_suffix}_HM_step2_2V_plot.pdf")
+
+        if step2Enabled and variables == 3:
+            param3 = group["param3"]
+            result.append(f"{prefix}/plots/{param1}_{param2}_{param3}_{template_suffix}_HM_step2_3V_plot_1.pdf")
+
+        if amrSearchEnabled and variables == 2:
+            result.append(f"{prefix}/plots/{param1}_{param2}_{template_suffix}_amr_2V_plot.pdf")
+
+        if amrSearchEnabled and variables == 3:
+            param3 = group["param3"]
+            result.append(f"{prefix}/plots/{param1}_{param2}_{param3}_{template_suffix}_amr_3V_plot_1.pdf")
+
+        if durationsEnabled:
+            result.append(f"{prefix}/plots/durations_grid.pdf")
+            result.append(f"{prefix}/plots/durations_global.pdf")
+
+    return result
+
+
+rule all:
+    input:
+        allRule
+
+if durationsEnabled:
+    rule durations:
+        input: f"{prefix}/summary_execution_times.csv"
+        output:
+            grid=f"{prefix}/plots/durations_grid.pdf",
+            glob=f"{prefix}/plots/durations_global.pdf"
+        log:
+            f"{prefix}/logs/durations.log"
+        shell:
+            """
+                RCODE="
+                   inputfilename='{input}';
+                   outputfileGrid='{output.grid}';
+                   outputfileGlobal='{output.glob}';
+                   source('durations.R')"
+                echo $RCODE | Rscript - 2>&1 > {log}.Rout
+            """
+
+if step2Enabled and variables == 2:
+    ###############
+    # HM step2 plot
+    ###############
+    for groupStr in template2VarsGroups:
+        group = json.loads(groupStr)
+        param1 = group["param1"]
+        param2 = group["param2"]
+        template_suffix = group["template"].replace("{","").replace("}","")
+
+        rule:
+            name: f"plot2-{param1}-{param2}-{template_suffix}"
+            input:
+                expand(f"{prefix}/csv/{param1}_{param2}_{template_suffix}_aggregated_step2_results.csv",prefix=prefix,param1=param1,param2=param2,template_suffix=template_suffix)
+            params:
+                param1=param1,
+                param2=param2
+            log:
+                f"{prefix}/logs/{param1}_{param2}_HM_step2_plot.log"
+            output:
+                f"{prefix}/plots/{param1}_{param2}_{template_suffix}_HM_step2_2V_plot.pdf"
+            shell:
+                """
+                RCODE="
+                   input_rds_files='{input}';
+                   param1='{params.param1}';
+                   param2='{params.param2}';
+                   output_filename1 = '{output}';
+                   source('confusionHM_2V.R')"
+                echo $RCODE | Rscript - 2>&1 > {log}.Rout
+                """
+
+if step2Enabled and variables == 3:
+    ###############
+    # HM step2 plot
+    ###############
+    for groupStr in template3VarsGroups:
+        group = json.loads(groupStr)
+        param1 = group["param1"]
+        param2 = group["param2"]
+        param3 = group["param3"]
+        template_suffix = group["template"].replace("{","").replace("}","")
+
+        rule:
+            name: f"plot2-{param1}-{param2}-{param3}-{template_suffix}"
+            input:
+                expand(f"{prefix}/csv/{param1}_{param2}_{param3}_{template_suffix}_aggregated_step2_results.csv",prefix=prefix,param1=param1,param2=param2,param3=param3,template_suffix=template_suffix)
+            params:
+                param1=param1,
+                param2=param2,
+                param3=param3
+            log:
+                f"{prefix}/logs/{param1}_{param2}_{param3}_HM_step2_plot.log"
+            output:
+                a=f"{prefix}/plots/{param1}_{param2}_{param3}_{template_suffix}_HM_step2_3V_plot_1.pdf",
+                b=f"{prefix}/plots/{param1}_{param2}_{param3}_{template_suffix}_HM_step2_3V_plot_2.pdf"  #,
+            #c = f"{prefix}/plots/{param1}_{param2}_{param3}_{template_suffix}_HM_step2_3V_plot_3.pdf"
+            shell:
+                """
+                RCODE="
+                   input_rds_files='{input}';
+                   param1='{params.param1}';
+                   param2='{params.param2}';
+                   param3='{params.param3}';
+                   output_filename1 = '{output.a}';
+                   output_filename2 = '{output.b}';
+                   source('confusionHM_3V.R')"
+                echo $RCODE | Rscript - 2>&1 > {log}.Rout
+                """
+
+if amrSearchEnabled and variables == 2:
+    ##############
+    ## Rule F1 score plot
+    ##############
+    for groupStr in template2VarsGroups:
+        group = json.loads(groupStr)
+        param1 = group["param1"]
+        param2 = group["param2"]
+        template_suffix = group["template"].replace("{","").replace("}","")
+
+        rule:
+            name: f"plotamr-{param1}-{param2}-{template_suffix}"
+            input:
+                expand(f"{prefix}/csv/{param1}_{param2}_{template_suffix}_amr_aggregated_results.csv",prefix=prefix,param1=param1,param2=param2,template_suffix=template_suffix)
+            params:
+                param1=param1,
+                param2=param2
+            log:
+                f"{prefix}/logs/{param1}_{param2}_amr_plot.log"
+            output:
+                a=f"{prefix}/plots/{param1}_{param2}_{template_suffix}_amr_2V_plot.pdf"
+            shell:
+                """
+                RCODE="
+                   input_rds_files='{input}';
+                   param1='{params.param1}';
+                   param2='{params.param2}';
+                   output_filename1 = '{output.a}';
+                   source('amrPlot_2V.R')"
+                echo $RCODE | Rscript - 2>&1 > {log}.Rout
+                """
+
+if amrSearchEnabled and variables == 3:
+    ###############
+    # HM step2 plot
+    ###############
+    for groupStr in template3VarsGroups:
+        group = json.loads(groupStr)
+        param1 = group["param1"]
+        param2 = group["param2"]
+        param3 = group["param3"]
+        template_suffix = group["template"].replace("{","").replace("}","")
+
+        rule:
+            name: f"plotamr-{param1}-{param2}-{param3}-{template_suffix}"
+            input:
+                expand(f"{prefix}/csv/{param1}_{param2}_{param3}_{template_suffix}_amr_search_aggregated_results.csv",prefix=prefix,param1=param1,param2=param2,param3=param3,template_suffix=template_suffix)
+            params:
+                param1=param1,
+                param2=param2,
+                param3=param3
+            output:
+                f"{prefix}/plots/{param1}_{param2}_{param3}_{template_suffix}_amr_3V_plot_1.pdf"
+            shell:
+                """
+                RCODE="
+                   input_rds_files='{input}';
+                   param1='{params.param1}';
+                   param2='{params.param2}';
+                   param3='{params.param3}';
+                   output_filename1 = '{output}';
+                   source('amrPlot_3V.R')"
+                echo $RCODE | Rscript - 2>&1 > {log}.Rout
+                """
+
+if f1ScoreEnabled and variables == 2:
+    ##############
+    ## Rule F1 score plot
+    ##############
+    for groupStr in template2VarsGroups:
+        group = json.loads(groupStr)
+        param1 = group["param1"]
+        param2 = group["param2"]
+        template_suffix = group["template"].replace("{","").replace("}","")
+
+        rule:
+            name: f"plot-{param1}-{param2}-{template_suffix}"
+            input:
+                expand(f"{prefix}/csv/{param1}_{param2}_{template_suffix}_aggregated_results.csv",prefix=prefix,param1=param1,param2=param2,template_suffix=template_suffix)
+            params:
+                param1=param1,
+                param2=param2
+            log:
+                f"{prefix}/logs/{param1}_{param2}_F1score_plot.log"
+            output: f"{prefix}/plots/{param1}_{param2}_{template_suffix}_global.pdf"
+            shell:
+                """
+                RCODE="
+                   input_rds_files='{input}';
+                   param1='{params.param1}';
+                   param2='{params.param2}';
+                   output_filename1 = '{output}';
+                   source('F1scorePlot_2V.R')"
+                echo $RCODE | Rscript - 2>&1 > {log}.Rout
+                """
+
+if f1ScoreEnabled and variables == 3:
+    ##############
+    ## Rule F1 score plot
+    ##############
+    for groupStr in template3VarsGroups:
+        group = json.loads(groupStr)
+        param1 = group["param1"]
+        param2 = group["param2"]
+        param3 = group["param3"]
+        template_suffix = group["template"].replace("{","").replace("}","")
+
+        rule:
+            name: f"plot-{param1}-{param2}-{param3}-{template_suffix}"
+            input:
+                expand(f"{prefix}/csv/{param1}_{param2}_{param3}_{template_suffix}_aggregated_results.csv",prefix=prefix,param1=param1,param2=param2,param3=param3,template_suffix=template_suffix)
+            params:
+                param1=param1,
+                param2=param2,
+                param3=param3
+            log:
+                f"{prefix}/logs/{param1}_{param2}_{param3}_F1score_plot.log"
+            output:
+                a=f"{prefix}/plots/{param1}_{param2}_{param3}_{template_suffix}_step1_global.pdf"
+            shell:
+                """
+                RCODE="
+                   input_rds_files='{input}';
+                   param1='{params.param1}';
+                   param2='{params.param2}';
+                   param3='{params.param3}';
+                   output_filename1 = '{output.a}';
+                   source('F1scorePlot_3V.R')"
+                echo $RCODE | Rscript - 2>&1 > {log}.Rout
+                """
+
+
+def writef1ScoreCSV(input, output):
+    with open(output[0],"w") as out:
+        print("\n".join(map(str,input)),file=out)
+
+
+if f1ScoreEnabled and variables == 2:
+    ##############
+    ## Rules F1score aggregate
+    ##############
+    for groupStr in template2VarsGroups:
+        group = json.loads(groupStr)
+        param1 = group["param1"]
+        param2 = group["param2"]
+        template = group["template"]
+        template_suffix = group["template"].replace("{","").replace("}","")
+
+        rule:
+            name: f"aggregate-f1score-{param1}-{param2}-{template_suffix}"
+            input:
+                expand(f"{prefix}/F1score/simu_{template}_sim_{{s}}_hdmax2_{{model}}_F1score_res.rds",
+                    prefix=prefix,
+                    p=p,
+                    n=n,
+                    nb_causal_probes=nb_causal_probes,
+                    mean_A=mean_A,
+                    mean_B=mean_B,
+                    sd_A=sd_A,
+                    sd_B=sd_B,
+                    rho=rho,
+                    causal_probes_overlap=causal_probes_overlap,
+                    lambda_time=lambda_time,
+                    s=s,
+                    model=model)
+            output: f"{prefix}/csv/{param1}_{param2}_{template_suffix}_aggregated_results.csv"
+            run:
+                writef1ScoreCSV(input,output)
+
+    rule F1score:
+        input:
+            step1="{prefix}/step1s/simu_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_sim_{s}_hdmax2_{model}_step1_res.rds",
+            simu="{prefix}/simus/simu_res_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_sim_{s}.rds"
+        log:
+            "{prefix}/logs/simu_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_sim_{s}_hdmax2_{model}_F1score_res.log"
+        output:
+            rds="{prefix}/F1score/simu_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_sim_{s}_hdmax2_{model}_F1score_res.rds",
+
+        shell:
+            """
+           RCODE="
+               input_filename='{input.simu}';
+               input_filename2='{input.step1}';
+               output_filename = '{output.rds}';
+               s =   {wildcards.s};
+               n = {wildcards.n};
+               p = {wildcards.p};
+               nb_causal_probes={wildcards.nb_causal_probes};
+               mean_A = {wildcards.mean_A};
+               mean_B = {wildcards.mean_B};
+               sd_A = {wildcards.sd_A};
+               sd_B = {wildcards.sd_B};
+               rho = {wildcards.rho};
+               causal_probes_overlap= {wildcards.causal_probes_overlap};
+               lambda_time = {wildcards.lambda_time};
+               model = '{wildcards.model}';
+               source('params2.R');
+               source('F1score.R')"
+           echo $RCODE | Rscript - 2>&1 > {log}.Rout
+  """
+
+if f1ScoreEnabled and variables == 3:
+    for groupStr in template3VarsGroups:
+        group = json.loads(groupStr)
+        param1 = group["param1"]
+        param2 = group["param2"]
+        param3 = group["param3"]
+        template = group["template"]
+        template_suffix = group["template"].replace("{","").replace("}","")
+
+        rule:
+            name: f"aggregate-f1score-{param1}-{param2}-{param3}-{template_suffix}"
+            input:
+                expand(f"{prefix}/F1score/simu_{template}_sim_{{s}}_hdmax2_{{model}}_F1score_res.rds",
+                    prefix=prefix,
+                    p=p,
+                    n=n,
+                    nb_causal_probes=nb_causal_probes,
+                    mean_A=mean_A,
+                    mean_B=mean_B,
+                    sd_A=sd_A,
+                    sd_B=sd_B,
+                    rho=rho,
+                    causal_probes_overlap=causal_probes_overlap,
+                    lambda_time=lambda_time,
+                    s=s,
+                    model=model)
+            output: f"{prefix}/csv/{param1}_{param2}_{param3}_{template_suffix}_aggregated_results.csv"
+            run:
+                writef1ScoreCSV(input,output)
+
+    rule F1score:
+        input:
+            step1="{prefix}/step1s/simu_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_sim_{s}_hdmax2_{model}_step1_res.rds",
+            simu="{prefix}/simus/simu_res_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_sim_{s}.rds"
+        log:
+            "{prefix}/logs/simu_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_sim_{s}_hdmax2_{model}_F1score_res.log"
+        output:
+            rds="{prefix}/F1score/simu_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_sim_{s}_hdmax2_{model}_F1score_res.rds",
+
+        shell:
+            """
+            RCODE="
+               input_filename='{input.simu}';
+               input_filename2='{input.step1}';
+               output_filename = '{output.rds}';
+               s =   {wildcards.s};
+               n = {wildcards.n};
+               p = {wildcards.p};
+               nb_causal_probes={wildcards.nb_causal_probes};
+               mean_A = {wildcards.mean_A};
+               mean_B = {wildcards.mean_B};
+               sd_A = {wildcards.sd_A};
+               sd_B = {wildcards.sd_B};
+               rho = {wildcards.rho};
+               causal_probes_overlap= {wildcards.causal_probes_overlap};
+               lambda_time = {wildcards.lambda_time};
+               model = '{wildcards.model}';
+               source('params2.R');
+               source('F1score.R')"
+            echo $RCODE | Rscript - 2>&1 > {log}.Rout
+            """
+
+if step2Enabled and variables == 2:
+
+    #############
+    ## Rule Aggregate Step2
+    #############
+    for groupStr in template2VarsGroups:
+        group = json.loads(groupStr)
+        param1 = group["param1"]
+        param2 = group["param2"]
+        template = group["template"]
+        template_suffix = group["template"].replace("{","").replace("}","")
+
+        rule:
+            name: f"aggregate-step2-{param1}-{param2}-{template_suffix}"
+            input:
+                step2=expand(f"{prefix}/step2s/simu_{template}_{{model}}_{{method}}_sim_{{s}}_step2_res.rds",
+                    prefix=prefix,
+                    p=p,
+                    n=n,
+                    nb_causal_probes=nb_causal_probes,
+                    mean_A=mean_A,
+                    mean_B=mean_B,
+                    sd_A=sd_A,
+                    sd_B=sd_B,
+                    rho=rho,
+                    causal_probes_overlap=causal_probes_overlap,
+                    lambda_time=lambda_time,
+                    s=s,
+                    model=model,
+                    method=method),
+                finalplot=expand(f"{prefix}/simus/finalplot_{template}_{{model}}_{{method}}_sim_{{s}}.rds",
+                    prefix=prefix,
+                    p=p,
+                    n=n,
+                    nb_causal_probes=nb_causal_probes,
+                    mean_A=mean_A,
+                    mean_B=mean_B,
+                    sd_A=sd_A,
+                    sd_B=sd_B,
+                    rho=rho,
+                    causal_probes_overlap=causal_probes_overlap,
+                    lambda_time=lambda_time,
+                    s=s,
+                    model=model,
+                    method=method)
+            output: f"{prefix}/csv/{param1}_{param2}_{template_suffix}_aggregated_step2_results.csv"
+            run:
+                step2Files = [str(f) for f in input.step2]
+                finalplotFiles = [str(f) for f in input.finalplot]
+                step2Files.sort()
+                finalplotFiles.sort()
+                with open(output[0],"w") as out:
+                    for i in range(len(step2Files)):
+                        print(f"{step2Files[i]},{finalplotFiles[i]}",file=out)
+
+if step2Enabled and variables == 3:
+
+    #############
+    ## Rule Aggregate Step2
+    #############
+    for groupStr in template3VarsGroups:
+        group = json.loads(groupStr)
+        param1 = group["param1"]
+        param2 = group["param2"]
+        param3 = group["param3"]
+        template = group["template"]
+        template_suffix = group["template"].replace("{","").replace("}","")
+
+    rule:
+        name: f"aggregate-step2-{param1}-{param2}-{param3}-{template_suffix}"
+        input:
+            step2=expand(f"{prefix}/step2s/simu_{template}_{{model}}_{{method}}_sim_{{s}}_step2_res.rds",
+                prefix=prefix,
+                p=p,
+                n=n,
+                nb_causal_probes=nb_causal_probes,
+                mean_A=mean_A,
+                mean_B=mean_B,
+                sd_A=sd_A,
+                sd_B=sd_B,
+                rho=rho,
+                causal_probes_overlap=causal_probes_overlap,
+                lambda_time=lambda_time,
+                s=s,
+                model=model,
+                method=method),
+            finalplot=expand(f"{prefix}/simus/finalplot_{template}_{{model}}_{{method}}_sim_{{s}}.rds",
+                prefix=prefix,
+                p=p,
+                n=n,
+                nb_causal_probes=nb_causal_probes,
+                mean_A=mean_A,
+                mean_B=mean_B,
+                sd_A=sd_A,
+                sd_B=sd_B,
+                rho=rho,
+                causal_probes_overlap=causal_probes_overlap,
+                lambda_time=lambda_time,
+                s=s,
+                model=model,
+                method=method)
+        output:
+            f"{prefix}/csv/{param1}_{param2}_{param3}_{template_suffix}_aggregated_step2_results.csv"
+        run:
+            step2Files = [str(f) for f in input.step2]
+            finalplotFiles = [str(f) for f in input.finalplot]
+            step2Files.sort()
+            finalplotFiles.sort()
+            with open(output[0],"w") as out:
+                for i in range(len(step2Files)):
+                    print(f"{step2Files[i]},{finalplotFiles[i]}",file=out)
+
+##############
+## Rule AMR search
+##############
+if amrSearchEnabled and variables == 3:
+    for groupStr in template3VarsGroups:
+        group = json.loads(groupStr)
+        param1 = group["param1"]
+        param2 = group["param2"]
+        param3 = group["param3"]
+        template = group["template"]
+        template_suffix = group["template"].replace("{","").replace("}","")
+
+        rule:
+            name: f"aggregate-amr-{param1}-{param2}-{param3}-{template_suffix}"
+            input:
+                expand(f"{prefix}/amrs/simu_{template}_sim_{{s}}_{{model}}_amrSearch_res.rds",
+                    prefix=prefix,
+                    p=p,
+                    n=n,
+                    nb_causal_probes=nb_causal_probes,
+                    mean_A=mean_A,
+                    mean_B=mean_B,
+                    sd_A=sd_A,
+                    sd_B=sd_B,
+                    rho=rho,
+                    causal_probes_overlap=causal_probes_overlap,
+                    lambda_time=lambda_time,
+                    s=s,
+                    model=model)
+            output: f"{prefix}/csv/{param1}_{param2}_{param3}_{template_suffix}_amr_search_aggregated_results.csv"
+            run:
+                writef1ScoreCSV(input,output)
+                
+    rule step2AMR:
+        input: "{prefix}/amrs/simu_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_sim_{s}_{model}_amrSearch_res.rds"
+        
+        output:
+          step2="{prefix}/step2AMRs/simu_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_{model}_{method}_sim_{s}_step2AMR_res.rds",
+          duration="{prefix}/durations/simu_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_model_{model}_{method}_sim_{s}_step2AMR_duration.txt"
+        log:
+            "{prefix}/logs/step2AMRs_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_{model}_{method}_sim_{s}_step2AMR_res.Rout"
+        shell:
+          """
+          start=$(date +%s)
+          RCODE="
+              input_filename='{input}';
+              output_filename ='{output.step2}';
+              s =   {wildcards.s};
+              n = {wildcards.n};
+              p = {wildcards.p};
+              nb_causal_probes={wildcards.nb_causal_probes};
+              mean_A = {wildcards.mean_A};
+              mean_B = {wildcards.mean_B};
+              sd_A = {wildcards.sd_A};
+              sd_B = {wildcards.sd_B};
+              rho = {wildcards.rho};
+              causal_probes_overlap= {wildcards.causal_probes_overlap};
+              lambda_time = {wildcards.lambda_time};
+              model = '{wildcards.model}';
+              method = '{wildcards.method}';
+              source('params2.R');
+              source('step2AMR_{wildcards.method}.R')"
+          echo "$RCODE" | Rscript - 2>&1 > {log}.Rout
+          end=$(date +%s)
+          echo $((end - start)) > {output.duration}
+          """
+    rule amrSearch:
+        input:
+            step1="{prefix}/step1s/simu_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_sim_{s}_hdmax2_{model}_step1_res.rds",
+            simu="{prefix}/simus/simu_res_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_sim_{s}.rds"
+
+        output: "{prefix}/amrs/simu_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_sim_{s}_{model}_amrSearch_res.rds"
+
+        log: "{prefix}/logs/simu_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_sim_{s}_{model}_amrSearch_res.rds"
+        shell:
+            """
+            RCODE="
+               input_filename='{input.step1}';
+               input_filename2='{input.simu}';
+               output_filename ='{output}';
+               s =   {wildcards.s};
+               n = {wildcards.n};
+               p = {wildcards.p};
+               nb_causal_probes={wildcards.nb_causal_probes};
+               mean_A = {wildcards.mean_A};
+               mean_B = {wildcards.mean_B};
+               sd_A = {wildcards.sd_A};
+               sd_B = {wildcards.sd_B};
+               rho = {wildcards.rho};
+               causal_probes_overlap= {wildcards.causal_probes_overlap};
+               lambda_time = {wildcards.lambda_time};
+               model = '{wildcards.model}';
+               source('params2.R');
+               source('helper_functions.R');
+               source('amrSearch.R')"
+            echo $RCODE | Rscript - 2>&1 > {log}.Rout
+            """
+
+if amrSearchEnabled and variables == 2:
+    for groupStr in template2VarsGroups:
+        group = json.loads(groupStr)
+        param1 = group["param1"]
+        param2 = group["param2"]
+        template = group["template"]
+        template_suffix = group["template"].replace("{","").replace("}","")
+
+        rule:
+            name: f"aggregate-amr-{param1}-{param2}-{template_suffix}"
+            input:
+                expand(f"{prefix}/amrs/simu_{template}_sim_{{s}}_hdmax2_{{model}}_amrSearch_res.rds",
+                    prefix=prefix,
+                    p=p,
+                    n=n,
+                    nb_causal_probes=nb_causal_probes,
+                    mean_A=mean_A,
+                    mean_B=mean_B,
+                    sd_A=sd_A,
+                    sd_B=sd_B,
+                    rho=rho,
+                    causal_probes_overlap=causal_probes_overlap,
+                    lambda_time=lambda_time,
+                    s=s,
+                    model=model)
+            output: f"{prefix}/csv/{param1}_{param2}_{template_suffix}_amr_aggregated_results.csv"
+            run:
+                writef1ScoreCSV(input,output)
+
+    rule amrSearch:
+        input:
+            step1="{prefix}/step1s/simu_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_sim_{s}_hdmax2_{model}_step1_res.rds",
+            simu="{prefix}/simus/simu_res_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_sim_{s}.rds"
+
+        output: "{prefix}/amrs/simu_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_sim_{s}_hdmax2_{model}_amrSearch_res.rds"
+
+        log: "{prefix}/logs/simu_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_sim_{s}_hdmax2_{model}_amrSearch_res.rds"
+        shell:
+            """
+          RCODE="
+             input_filename='{input.step1}';
+             input_filename2='{input.simu}';
+             output_filename ='{output}';
+             s =   {wildcards.s};
+             n = {wildcards.n};
+             p = {wildcards.p};
+             nb_causal_probes={wildcards.nb_causal_probes};
+             mean_A = {wildcards.mean_A};
+             mean_B = {wildcards.mean_B};
+             sd_A = {wildcards.sd_A};
+             sd_B = {wildcards.sd_B};
+             rho = {wildcards.rho};
+             causal_probes_overlap= {wildcards.causal_probes_overlap};
+             lambda_time = {wildcards.lambda_time};
+             model = '{wildcards.model}';
+             source('params2.R');
+             source('helper_functions.R');
+             source('amrSearch.R')"
+          echo $RCODE | Rscript - 2>&1 > {log}.Rout
+          """
+
+if variables == 3:
+    ##############
+    ## Rule F1 score plot
+    ##############
+    for groupStr in template3VarsGroups:
+        group = json.loads(groupStr)
+        param1 = group["param1"]
+        param2 = group["param2"]
+        param3 = group["param3"]
+        template_suffix = group["template"].replace("{","").replace("}","")
+
+        rule:
+            name: f"plot-comp-{param1}-{param2}-{param3}-{template_suffix}"
+            input:
+                expand(f"{prefix}/csv/{param1}_{param2}_{param3}_{template_suffix}_step1_aggregated_results.csv",prefix=prefix,param1=param1,param2=param2,param3=param3,template_suffix=template_suffix)
+            params:
+                param1=param1,
+                param2=param2,
+                param3=param3
+            log:
+                f"{prefix}/logs/{param1}_{param2}_{param3}_comp_plot.log"
+            output:
+                a=f"{prefix}/plots/{param1}_{param2}_{param3}_{template_suffix}_step1_comparison.pdf"
+            shell:
+                """
+                RCODE="
+                   input_rds_files='{input}';
+                   param1='{params.param1}';
+                   param2='{params.param2}';
+                   param3='{params.param3}';
+                   output_filename1 = '{output.a}';
+                   source('compPlot_3V.R')"
+                echo $RCODE | Rscript - 2>&1 > {log}.Rout
+                """
+
+###################
+# Rule comp methode
+###################
+
+if variables == 3:
+    for groupStr in template3VarsGroups:
+        group = json.loads(groupStr)
+        param1 = group["param1"]
+        param2 = group["param2"]
+        param3 = group["param3"]
+        template = group["template"]
+        template_suffix = group["template"].replace("{","").replace("}","")
+
+        rule:
+            name: f"aggregate-and-compare-step1-res-{param1}-{param2}-{param3}-{template_suffix}"
+            input:
+                expand(f"{prefix}/step1s/simu_{template}_sim_{{s}}_hdmax2_{{model}}_step1_res.rds",
+                    prefix=prefix,
+                    p=p,
+                    n=n,
+                    nb_causal_probes=nb_causal_probes,
+                    mean_A=mean_A,
+                    mean_B=mean_B,
+                    sd_A=sd_A,
+                    sd_B=sd_B,
+                    rho=rho,
+                    causal_probes_overlap=causal_probes_overlap,
+                    lambda_time=lambda_time,
+                    s=s,
+                    model=model)
+            output: f"{prefix}/csv/{param1}_{param2}_{param3}_{template_suffix}_step1_aggregated_results.csv"
+            run:
+                writef1ScoreCSV(input,output)
+
+##############
+## Rule aggregate duration
+##############
+if durationsEnabled and step2Enabled:
+    rule aggregate_durations:
+        input:
+            duration_step1=expand(
+                "{prefix}/durations/simu_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_model_{model}_hdmax2_sim_{s}_step1_duration.txt",
+                prefix=prefix,
+                p=p,
+                n=n,
+                nb_causal_probes=nb_causal_probes,
+                mean_A=mean_A,
+                mean_B=mean_B,
+                sd_A=sd_A,
+                sd_B=sd_B,
+                rho=rho,
+                causal_probes_overlap=causal_probes_overlap,
+                lambda_time=lambda_time,
+                s=s,
+                model=model),
+            duration_step2=expand(
+                "{prefix}/durations/simu_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_model_{model}_{method}_sim_{s}_step2_duration.txt",
+                prefix=prefix,
+                p=p,
+                n=n,
+                nb_causal_probes=nb_causal_probes,
+                mean_A=mean_A,
+                mean_B=mean_B,
+                sd_A=sd_A,
+                sd_B=sd_B,
+                rho=rho,
+                causal_probes_overlap=causal_probes_overlap,
+                lambda_time=lambda_time,
+                s=s,
+                model=model,
+                method=method)
+        output:
+            summary=f"{prefix}/summary_execution_times.csv"
+        run:
+            step1Files = [str(f) for f in input.duration_step1]
+            step2Files = [str(f) for f in input.duration_step2]
+            step1Files.sort()
+            step2Files.sort()
+            with open(output.summary,"w") as out:
+                print("step,step1,step2,total",file=out)
+                step1index = 0
+                for step2Index in range(len(step2Files)):
+                    step = os.path.basename(step2Files[step2Index])
+                    with open(step1Files[step1index],'r') as file:
+                        step1Duration = file.read().strip()
+                    with open(step2Files[step2Index],'r') as file:
+                        step2Duration = file.read().strip()
+                    total = int(step1Duration) + int(step2Duration)
+                    print(f"{step},{step1Duration},{step2Duration},{total}",file=out)
+                    if (step2Index + 1) % 3 == 0:
+                        step1index = step1index + 1
+
+if durationsEnabled and not step2Enabled:
+    rule aggregate_durationsStep1only:
+        input:
+            duration_step1=expand(
+                "{prefix}/durations/simu_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_model_{model}_hdmax2_sim_{s}_step1_duration.txt",
+                prefix=prefix,
+                p=p,
+                n=n,
+                nb_causal_probes=nb_causal_probes,
+                mean_A=mean_A,
+                mean_B=mean_B,
+                sd_A=sd_A,
+                sd_B=sd_B,
+                rho=rho,
+                causal_probes_overlap=causal_probes_overlap,
+                lambda_time=lambda_time,
+                s=s,
+                model=model)
+        output:
+            summary=f"{prefix}/summary_execution_times.csv"
+        run:
+            step1Files = [str(f) for f in input.duration_step1]
+            step1Files.sort()
+            with open(output.summary,"w") as out:
+                print("step,step1",file=out)
+                for f in step1Files:
+                    step = os.path.basename(f)
+                    with open(f,'r') as file:
+                        step1Duration = file.read().strip()
+                        print(f"{step},{step1Duration}",file=out)
+
+
+##############
+## Rule HDMAX 2 Step 2
+##############  
+rule step2:
+    input:
+        step1="{prefix}/step1s/simu_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_sim_{s}_hdmax2_{model}_step1_res.rds",
+        simu="{prefix}/simus/simu_res_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_sim_{s}.rds"
+    output:
+        step2="{prefix}/step2s/simu_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_{model}_{method}_sim_{s}_step2_res.rds",
+        duration="{prefix}/durations/simu_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_model_{model}_{method}_sim_{s}_step2_duration.txt"
+    log:
+        log="{prefix}/logs/simu_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_{model}_{method}_sim_{s}_step2_res.log"
+    shell:
+        """
+        start=$(date +%s)
+        RCODE="
+            input_filename='{input.step1}';
+            input_filename2='{input.simu}';
+            output_filename ='{output.step2}';
+            s =   {wildcards.s};
+            n = {wildcards.n};
+            p = {wildcards.p};
+            nb_causal_probes={wildcards.nb_causal_probes};
+            mean_A = {wildcards.mean_A};
+            mean_B = {wildcards.mean_B};
+            sd_A = {wildcards.sd_A};
+            sd_B = {wildcards.sd_B};
+            rho = {wildcards.rho};
+            causal_probes_overlap= {wildcards.causal_probes_overlap};
+            lambda_time = {wildcards.lambda_time};
+            model = '{wildcards.model}';
+            method = '{wildcards.method}';
+            source('params2.R');
+            source('step2_{wildcards.method}.R')"
+        echo "$RCODE" | Rscript - 2>&1 > {log.log}.Rout
+        end=$(date +%s)
+        echo $((end - start)) > {output.duration}
+        """
+
+
+##############
+## Rule HDMAX 2 Step 1
+##############
+rule step1:
+    input:
+        simu="{prefix}/simus/simu_res_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_sim_{s}.rds"
+    output:
+        step1="{prefix}/step1s/simu_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_sim_{s}_hdmax2_{model}_step1_res.rds",
+        duration="{prefix}/durations/simu_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_model_{model}_hdmax2_sim_{s}_step1_duration.txt"
+    log:
+        log="{prefix}/logs/simu_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_sim_{s}_hdmax2_{model}_step1_res.log"
+    shell:
+        """
+        start=$(date +%s)
+        RCODE="
+            input_filename='{input.simu}'; 
+            output_filename = '{output.step1}'; 
+            s =   {wildcards.s};
+            n = {wildcards.n};
+            p = {wildcards.p};
+            nb_causal_probes={wildcards.nb_causal_probes};
+            mean_A = {wildcards.mean_A};
+            mean_B = {wildcards.mean_B};
+            sd_A = {wildcards.sd_A};
+            sd_B = {wildcards.sd_B};
+            rho = {wildcards.rho};
+            causal_probes_overlap= {wildcards.causal_probes_overlap};
+            lambda_time = {wildcards.lambda_time};
+            model = '{wildcards.model}';
+            source('params2.R');
+            source('step1_{wildcards.model}.R')"
+        echo $RCODE | Rscript - 2>&1 > {log.log}.Rout
+        end=$(date +%s)
+        echo $((end - start)) > {output.duration}
+        """
+
+##############
+## Extract mediators
+##############
+rule extract_mediators:
+    input: "{prefix}/simus/simu_res_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_sim_{s}.rds"
+    output: "{prefix}/simus/finalplot_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_{model}_{method}_sim_{s}.rds"
+    log: "{prefix}/logs/finalplot_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_{model}_{method}_sim_{s}.log"
+    shell: "Rscript extract_mediators.R {wildcards.model} {wildcards.method} {input} {output} > {log}.Rout 2>&1"
+
+##############
+## Rule simulation
+##############
+rule run_simulation:
+    input:
+        init="new_test_simu.R"
+    output:
+        simu="{prefix}/simus/simu_res_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_sim_{s}.rds"
+    log:
+        "{prefix}/logs/simu_res_p_{p}_n_{n}_pcp_{nb_causal_probes}_mA_{mean_A}_mB_{mean_B}_sA_{sd_A}_sB_{sd_B}_ro_{rho}_overlap_{causal_probes_overlap}_lambda_{lambda_time}_sim_{s}.log"
+    shell:
+        """
+        RCODE="
+            filename='{output.simu}';
+            s =   {wildcards.s};
+            n = {wildcards.n};
+            p = {wildcards.p};
+            nb_causal_probes={wildcards.nb_causal_probes};
+            mean_A = {wildcards.mean_A};
+            mean_B = {wildcards.mean_B};
+            sd_A = {wildcards.sd_A};
+            sd_B = {wildcards.sd_B};
+            rho = {wildcards.rho};
+            causal_probes_overlap= {wildcards.causal_probes_overlap};
+            lambda_time = {wildcards.lambda_time};
+            source('params.R');
+            source('simulateur.R')"
+        echo $RCODE | Rscript - 2>&1 > {log}.Rout
+        """

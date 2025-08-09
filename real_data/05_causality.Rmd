@@ -1,0 +1,1181 @@
+---
+title: "Causality analysis"
+output:
+  html_document:
+    toc: true
+    theme: united
+date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
+---
+
+```{r}
+# load packages
+library(ggplot2)   
+#install.packages("mpmi")
+library(mpmi)
+
+# For PC analysis
+library(reticulate)
+library(tidyverse)
+library(ggpubr)
+library(dagitty)
+library(broom)
+library(pheatmap)
+# load data
+
+library(survival)
+library(survminer)
+library(gridExtra)
+
+# for theoretical exploration
+AMR_matrix = readRDS("~/projects/thema_surv/real_data/results/04_tcga_imm_AMR_matrix_fdr0_05_V2_K8_corrected.rds")
+tcga_data = readRDS("~/projects/thema_surv/real_data/results/01_tcga_data_expo_deconv.rds")
+
+# for empirical pvalues : load results from Nelle analysis
+amr_to_imm = read.csv("~/projects/thema_surv/real_data/results/amr_to_imm.csv", header = TRUE) 
+ANM_CDS = read.csv("~/projects/thema_surv/real_data/results/amr_to_imm_ANM_CDS.csv", header = TRUE) 
+
+#get the results of serial mediation
+idx_woLF = readRDS("~/projects/thema_surv/real_data/results/06_TCGA_serial_med_top50_V2_K8_corrected_without_LF_selected_combinaison.rds") # without Latent Factor
+length(idx_woLF)
+idx_wLF = readRDS("~/projects/thema_surv/real_data/results/06_TCGA_serial_med_top50_V2_K8_corrected_with_LF_selected_combinaison.rds") # with Latent Factor
+length(idx_wLF)
+
+# for independance testing
+#datAMR = read.csv2("results/tcga_AMR_mean_meth_top50.csv", header = TRUE, stringsAsFactors = FALSE, row.names = 1, sep = ",")
+datAMR = read.csv2("~/projects/thema_surv/real_data/results/03_tcga_AMR_mean_meth_top50_fdr0_05_V2_K8_corrected.csv", header = TRUE, stringsAsFactors = FALSE, row.names = 1, sep = ",") #to check
+
+#significant AMR
+tobacco_AMR <- readRDS("~/projects/thema_surv/real_data/results/03_tcga_significative_from_top50_tobacco_AMR_fdr0_05_V2_K8_corrected.rds")
+
+datIMM = read.csv2("~/projects/thema_surv/real_data/results/03_tcga_consensus_deconv_immune_cells.csv", header = TRUE, stringsAsFactors = FALSE, row.names = 1, sep = ",")
+datIMM[] <- lapply(datIMM, function(x) as.numeric(as.character(x)))
+datIMM$all = rowSums(datIMM)
+
+#result of the mediation to collect latent factors
+
+res_med = readRDS("results/02_tcga_med_tobacco_dnam_V2_K8_corrected.rds")
+LFs = res_med$hdmax2_step1_param$AS_1$U
+```
+
+# Theoretical exploration on linear non-Gaussian causal models
+
+## Reproduction of Hoyer et al, 2008 (uniform distribution)
+
+
+
+This code is a reproduction of the theoretical exploration of Hoyer et al, 2008 (Figure 1 cases II and III). 
+It is not used in the main analysis of the paper, but it is useful to understand the theoretical background of the causal inference methods used in the paper.
+
+
+Source : 
+
+Patrik O. Hoyer, Shohei Shimizu, Antti J. Kerminen, Markus Palviainen,
+Estimation of causal effects using linear non-Gaussian causal models with hidden variables,
+International Journal of Approximate Reasoning,
+Volume 49, Issue 2, 2008,Pages 362-378, ISSN 0888-613X,
+[link](https://doi.org/10.1016/j.ijar.2008.02.006)
+
+
+
+```{r}
+alpha = 1
+
+e1 = runif(1000)
+e2 = runif(1000)
+
+#first model x1 -> x2
+x1 = e1
+x2 = alpha*x1 + e2
+
+#second model x3 <- x4
+x4 = e2
+x3 = alpha*x4 + e1
+
+layout(matrix(1:2, nrow = 1))
+plot(x1,x2)
+plot(x3,x4)
+```
+
+## With errors following a beta distrubtion
+
+We assume that AMR and immune proportion are following a beta distribution. 
+
+```{r}
+alpha = 1
+
+e1 = rbeta(1000, 0.5, 0.5)
+e2 = rbeta(1000, 0.5, 0.5)
+
+#first model x1 -> x2
+x1 = e1
+x2 = alpha*x1 + e2
+
+#second model x3 <- x4
+x4 = e2
+x3 = alpha*x4 + e1
+
+layout(matrix(1:2, nrow = 1))
+plot(x1,x2)
+plot(x3,x4)
+```
+
+## A basic test to estimate directionality
+
+```{r load}
+#first model x1 -> x2
+var1 = x1
+var2 = x2
+mod_forward = lm(var2 ~ var1)
+res_forward = mod_forward$residuals
+mod_backward = lm(var1 ~ var2)
+res_backward = mod_backward$residuals
+
+layout(matrix(1:6, nrow = 2))
+    plot(var1, res_forward, main = "Forward model = TRUE")
+    plot(var2,res_backward, main = "Backward model = FALSE")
+    plot(var1, e1, main = "Ground truth var 1")
+    plot(var1, e2, main = "Ground truth var 1")
+    plot(var2, e1, main = "Ground truth var 2")
+    plot(var2, e2, main = "Ground truth var 2")
+    
+#second model x1 <- x2
+var1 = x3
+var2 = x4
+mod_forward = lm(var2 ~ var1)
+res_forward = mod_forward$residuals
+mod_backward = lm(var1 ~ var2)
+res_backward = mod_backward$residuals
+
+layout(matrix(1:6, nrow = 2))
+    plot(var1, res_forward, main = "Forward model = FALSE")
+    plot(var2,res_backward, main = "Backward model = TRUE")
+    plot(var1, e1, main = "Ground truth var 1")
+    plot(var1, e2, main = "Ground truth var 1")
+    plot(var2, e1, main = "Ground truth var 2")
+    plot(var2, e2, main = "Ground truth var 2")
+```
+
+## A generic function with mutual information
+
+```{r}
+
+
+
+function_causality = function(x1, x2){
+  # model 1
+  mod_forward = lm(x2 ~ x1)
+  res_forward = mod_forward$residuals
+   mi_cont <- mpmi::cmi(cbind(x1,res_forward)) # mutual information on continuous variables
+    zscore_fw = lapply(mi_cont, round, 2)$zvalues[1,2] #Z-scores for each hypothesis that the corresponding BCMI value is zero. These have poor statistical properties but can be useful as a rough measure of the strength of association.
+  #model 2
+      mod_backward = lm(x1 ~ x2)
+  res_backward = mod_backward$residuals
+  mi_cont <- mpmi::cmi(cbind(x2,res_backward)) # mutual information on continuous variables
+    zscore_bw = lapply(mi_cont, round, 2)$zvalues[1,2] #Z-scores for each hypothesis that the corresponding BCMI value is zero. These have poor statistical properties but can be useful as a rough measure of the strength of association.
+  return(list(x1 = x1, x2 = x2, forward = res_forward, backward = res_backward, zscore_fw = zscore_fw, zscore_bw = zscore_bw))
+}
+
+#layout(matrix(1:2, nrow = 1)) #the TRUE model show independance between var and model error
+  #  plot(res$x1, res$forward, main = "x1 -> x2")
+
+plot_MI = function(res, title = "Res"){    
+    
+  #plot model 1 (forward)
+ 
+    res_df = data.frame(var = res$x1, errors = res$forward)
+  p1 =   ggplot(res_df, aes(x = var, y = errors))   +
+  geom_point(color = "blue", alpha = 0.6) +  # Nuage de points
+  geom_smooth(method = "lm", col = "red", se = FALSE) +  # Régression linéaire
+  ggtitle(paste0(title,": x1 -> x2")) +
+  theme_minimal() +
+  annotate("text", x = min(res$x1), y = max(res$forward), 
+           label = paste("MI:",res$zscore_fw), 
+           hjust = 0, vjust = -0.3, size = 5, color = "red")
+  
+  #plot model 2 (backward)
+    
+    res_df = data.frame(var = res$x2, errors = res$backward)
+  p2 =   ggplot(res_df, aes(x = var, y = errors))   +
+  geom_point(color = "blue", alpha = 0.6) +  
+  geom_smooth(method = "lm", col = "red", se = FALSE) +  # linear regression
+  ggtitle(paste0(title,": x2 -> x1")) +
+  theme_minimal() +
+  annotate("text", x = min(res$x2), y = max(res$backward), 
+           label = paste("MI:",res$zscore_bw), 
+           hjust = 0, vjust = -0.3, size = 5, color = "red")
+
+     gridExtra::grid.arrange(p1, p2, ncol = 2)
+}
+
+resx1x2 = function_causality(x1,x2)
+plot_MI(resx1x2)
+
+resx3x4 = function_causality(x3,x4)
+plot_MI(resx3x4)
+```
+
+## Application on real data 
+
+```{r}
+#sign corr
+
+
+imm_tot = tcga_data$prop_immune
+
+plot(density(imm_tot))
+
+cor_matrix = apply(AMR_matrix$mean_meth_AMR, 2, FUN = function(AMR) { 
+                   cor =cor.test(AMR,imm_tot)$estimate
+                   pval = cor.test(AMR,imm_tot)$p.value
+                   return(list(cor = cor, pvalue = pval))
+                     })
+
+cor_matrix = do.call(rbind,cor_matrix)
+cor_matrix = data.frame(lapply(data.frame(cor_matrix, stringsAsFactors=FALSE), unlist), stringsAsFactors=FALSE)
+rownames(cor_matrix) = colnames(AMR_matrix$mean_meth_AMR)
+#AMR_subset = rownames(cor_matrix[which(cor_matrix$pvalue < 0.01),])         
+AMR_subset = rownames(cor_matrix) # pour prendre toutes les AMRs
+length(AMR_subset)
+AMR_subset
+
+res_causality = apply(AMR_matrix$mean_meth_AMR[,AMR_subset],2, function(x) {
+  function_causality(x,imm_tot)
+  })
+
+for (AMR_name in AMR_subset){
+  cur = res_causality[[AMR_name]]
+  plot_MI(cur, title = AMR_name)
+
+}
+
+#save results
+saveRDS(res_causality, "~/projects/thema_surv/real_data/results/05_tcga_causality.rds")
+```
+ 
+Graphical representation of the results of the causality analysis using hand-made function `function_causality` and `plot_MI` on the AMR subset.
+
+ 
+```{r, eval = FALSE}
+ df <- data.frame(
+  zscore_fw = unlist(sapply(res_causality, `[`, "zscore_fw")),
+  zscore_bw = unlist(sapply(res_causality, `[`, "zscore_bw"))
+)
+ rownames(df) = names(res_causality) 
+ df$dif = df$zscore_fw - df$zscore_bw #check which models has the highest mutual info
+ df$color_group <- ifelse(df$dif >= 0, "imm > AMR", "AMR > immu")
+ 
+ggplot(df, aes(x = zscore_fw, y = zscore_bw, color = color_group)) +
+  geom_point(alpha = 0.6) +  # Nuage de points coloré
+ # geom_smooth(method = "lm", col = "red", se = FALSE) +  # Régression linéaire
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "black") +  # Ligne d'identité y = x
+  scale_color_manual(values = c("imm > AMR" = "darkgreen", "AMR > immu" = "red")) +  # Couleurs personnalisées
+   geom_text(aes(label = rownames(df)), hjust = 0.5, vjust = -0.8, size = 3, color = "black") +  # Ajout des labels
+  ggtitle("Comparison of Mutual Information zscores") +
+  theme_minimal()
+```
+
+## Conclusion
+
+On real data, the results are not conclusive. The mutual information does not provide enough information to decipher the graph orientation. Hypothesis : the relationship between AMR and immune proportions is not linear, or the noise is too high to detect the causal relationship.
+
+# Bivariate causal discovery task using Causal discovery toolbox (python)
+ 
+This code uses the Caysal discovery toolbox (python, [link](https://fentechsolutions.github.io/CausalDiscoveryToolbox/html/index.html)) to perform a bivariate causal discovery task on the AMR subset. The analysis was performed by Nelle Varoquaux.
+
+We focused our analysis on two models :
+
+- The **Conditional Distribution Similarity** Statistic measures the
+std. of the rescaled values of y (resp. x) after binning in the x
+(resp. y) direction. The lower the std. the more likely the pair
+to be x->y (resp. y->x). It is a single feature of the Jarfo model. [Fonollosa, 2016].
+
+- The **Additive noise model** is one of the most popular
+approaches for pairwise causality. It bases on the fitness of the
+data to the additive noise model on one direction and the
+rejection of the model on the other
+direction.[Mooij et al., , Hoyer et al., 2008]
+
+For each model, we built empirical pvalues from 1,000 permutations.
+
+## Conditional Distribution Similarity
+
+
+``` {r, eval = FALSE}
+#amr_to_imm = read.csv("amr_to_imm.csv", header = TRUE) 
+#View(amr_to_imm)
+rownames(amr_to_imm) = amr_to_imm$X
+amr_to_imm = amr_to_imm[,-1]
+
+### plot positive interactions
+
+positive_amr = amr_to_imm[amr_to_imm$CDS > amr_to_imm$thres,]
+data = as.matrix(positive_amr)
+saveRDS(rownames(data), file = "results/05_posAMR_CDS.rds")
+
+# Visualisation
+n = nrow(data)
+#par(mfrow = c(ceiling(n / 2), 5))  # Affiche 2 graphes par ligne
+names = rownames(data)
+#dev.off()
+for (i in 1:nrow(data)) {
+  dist_vals <- data[i, 3:ncol(data)]
+  hist(dist_vals,
+       main = paste(names[[i]]),
+       xlab = "Values",
+       col = "lightgreen",
+       border = "white",
+       breaks = 20)
+
+  abline(v = data[i, 1], col = "red", lwd = 2, lty = 1)  # point
+  abline(v = data[i, 2], col = "blue", lwd = 2, lty = 2)  # limite
+  legend("topright", legend = c("Point", "Limite"),
+         col = c("red", "blue"), lty = c(1, 2), lwd = 2, bty = "n")
+}
+
+pdf("figures/05_empirical_pvalues.pdf", width = 12, height = 12)
+
+par(mfrow = c(ceiling(n / 2), 3), mar = c(4, 4, 2, 1))  # Affiche 2 graphes par ligne
+names = rownames(data)
+for (i in 1:nrow(data)) {
+  dist_vals <- data[i, 3:ncol(data)]
+  hist(dist_vals,
+       main = paste(names[[i]]),
+       xlab = "Values",
+       col = "lightgreen",
+       border = "white",
+       breaks = 20)
+
+  abline(v = data[i, 1], col = "red", lwd = 2, lty = 1)  # point
+  abline(v = data[i, 2], col = "blue", lwd = 2, lty = 2)  # limite
+  legend("topright", legend = c("AMR", "threshold"),
+         col = c("red", "blue"), lty = c(1, 2), lwd = 2, bty = "n")
+}
+
+dev.off()
+
+
+## plot permutation for positive candidates in serial mediation (from 06 TCGA serial mediation)
+
+#idx = readRDS("results/06_TCGA_serial_med_top50_V2_K8_corrected_selected_combinaison.rds")
+positive_amr = amr_to_imm[which(rownames(amr_to_imm) %in% idx_woLF),]
+data = as.matrix(positive_amr)
+
+# Visualisation
+n = nrow(data)
+par(mfrow = c(ceiling(n / 2), 3))  # Affiche 2 graphes par ligne
+names = rownames(data)
+dev.off()
+for (i in 1:nrow(data)) {
+  dist_vals <- data[i, 3:ncol(data)]
+  hist(dist_vals,
+       main = paste(names[[i]]),
+       xlab = "Values",
+       col = "lightblue",
+       border = "white",
+       breaks = 20)
+
+  abline(v = data[i, 1], col = "red", lwd = 2, lty = 1)  # point
+  abline(v = data[i, 2], col = "blue", lwd = 2, lty = 2)  # limite
+  legend("topright", legend = c("Point", "Limite"),
+         col = c("red", "blue"), lty = c(1, 2), lwd = 2, bty = "n")
+}
+
+pdf("figures/05_empirical_pvalues_for_selected_multimediators.pdf", width = 12, height = 12)
+
+par(mfrow = c(ceiling(n / 2), 3))  # Affiche 2 graphes par ligne
+names = rownames(data)
+for (i in 1:nrow(data)) {
+  dist_vals <- data[i, 3:ncol(data)]
+  hist(dist_vals,
+       main = paste(names[[i]]),
+       xlab = "Values",
+       col = "lightblue",
+       border = "white",
+       breaks = 20)
+
+  abline(v = data[i, 1], col = "red", lwd = 2, lty = 1)  # point
+  abline(v = data[i, 2], col = "blue", lwd = 2, lty = 2)  # limite
+  legend("topright", legend = c("AMR", "threshold"),
+         col = c("red", "blue"), lty = c(1, 2), lwd = 2, bty = "n")
+}
+
+dev.off()
+
+
+```
+
+## Additive noise model
+
+``` {r}
+#ANM_CDS = read.csv("amr_to_imm_ANM_CDS.csv", header = TRUE) 
+rownames(ANM_CDS) = ANM_CDS$X
+ANM_CDS = ANM_CDS[,-1]
+ANM_CDS = as.matrix(ANM_CDS)
+plot(ANM_CDS[,1], ANM_CDS[,2], xlab = "ANM", ylab = "CDS")
+
+which(colnames(ANM_CDS) == "thres.ANM")
+positive_ANM = ANM_CDS[ANM_CDS[, which(colnames(ANM_CDS) == "ANM")] > ANM_CDS[, which(colnames(ANM_CDS) == "thres.ANM")],]
+rownames(positive_ANM)
+saveRDS(rownames(positive_ANM), file = "results/05_posAMR_ANM.rds")
+data = positive_ANM[, c(which(colnames(positive_ANM) == "ANM"),
+                        which(colnames(positive_ANM) == "thres.ANM"),
+                       1005:dim(positive_ANM)[2])]
+
+
+pdf("figures/05_empirical_pvalues_ANM.pdf", width = 9, height = 12)
+
+#par(mfrow = c(ceiling(n / 2), 3))  # Affiche 2 graphes par ligne
+names = rownames(data)
+dev.off()
+for (i in 1:nrow(data)) {
+  dist_vals <- data[i, 3:ncol(data)]
+  hist(dist_vals,
+       main = paste(names[[i]]),
+       xlab = "Values",
+       col = "lightblue",
+       border = "white",
+       breaks = 20)
+
+  abline(v = data[i, 1], col = "red", lwd = 2, lty = 1)  # point
+  abline(v = data[i, 2], col = "blue", lwd = 2, lty = 2)  # limite
+  legend("topright", legend = c("AMR", "threshold"),
+         col = c("red", "blue"), lty = c(1, 2), lwd = 2, bty = "n")
+}
+
+dev.off()
+
+
+```
+
+## Conclusion
+
+The results are inconsistent with each other and non-conclusive. Open questions : Why do empirical distributions of the CDS and ANM statistics not center to zero ? Why do the ground truth dataset provided in the Causal Discovery Toolbox not appear significant ? 
+
+# Independance testing 
+
+The we decided to test the independance of immune content with the smoking status using (we tested different indepenance test, including Wilcoxon test).
+
+The reasonning is the following : there are 3 possible scenarios  :
+
+- (1) Tobacco -> Met and Immune -> Met (i.e. Tobacco and Imm are independant)
+- (2) (a) Tobbaco -> Met -> Imm or (b) Tobacco <- Met <- Imm (impossible)
+- (3) Met -> Tobacco and Met -> Immune (immpossible because Met can not affect Tobacco)
+
+*Rationale* : (3) is impossible. If Tobacco and Imm are not independant (1 false), then (2a) is true.
+
+## Performing the test
+
+```{r}
+
+
+#datAMR = read.csv2("results/tcga_AMR_mean_meth_top50.csv", header = TRUE, stringsAsFactors = FALSE, row.names = 1, sep = ",")
+datAMR[] <- lapply(datAMR, function(x) as.numeric(as.character(x)))
+#datIMM = read.csv2("results/tcga_consensus_deconv_immune_cells.csv", header = TRUE, stringsAsFactors = FALSE, row.names = 1, sep = ",")
+
+colnames(datIMM) = c( "Macrophages",  "B_cells",     "T_cells" ,    "NK",          "DCs" ,        "all" )
+
+#tcga_data = readRDS("~/projects/thema_surv/real_data/results/01_tcga_data_expo_deconv.rds")
+smoking = ifelse(tcga_data$tobacco==0, 'Non-smoker', 'Smoker')
+names(smoking) = rownames(tcga_data$M)
+labels = smoking[rownames(datAMR)]
+
+cur = datIMM 
+cur$Smoking_Status <- labels[rownames(cur)]
+
+# Effectuer un test de Wilcoxon entre chaque colonne numérique et Smoking_Status
+results <- sapply(names(cur)[names(cur) != "Smoking_Status"], function(var) {
+  wilcox.test(cur[[var]] ~ cur$Smoking_Status)$p.value
+})
+
+#t_test_results <- sapply(vars, function(var) {
+#  t.test(cur[[var]] ~ cur$Smoking_Status)$p.value
+#})
+
+# Afficher les p-values
+results_df <- data.frame(Variable = names(results), P_value = results)
+print(results_df)
+
+###PLOT
+
+
+
+
+# Colonnes des types cellulaires (tout sauf Smoking_Status)
+cell_vars <- setdiff(names(cur), "Smoking_Status")
+
+# Créer un dataframe long à la main (sans tidyr)
+cur_long <- data.frame(
+  Smoking_Status = rep(cur$Smoking_Status, times = length(cell_vars)),
+  Abundance = unlist(cur[cell_vars]),
+  Cell_Type = rep(cell_vars, each = nrow(cur))
+)
+
+# Violin plots avec facettes
+p = ggplot(cur_long, aes(x = Smoking_Status, y = Abundance, fill = Smoking_Status)) +
+  geom_violin(trim = FALSE) +
+  geom_boxplot(width = 0.1, outlier.shape = NA) +  # Optionnel : ajouter boxplot à l'intérieur
+  facet_wrap(~ Cell_Type, scales = "free_y") +
+  theme_minimal() +
+  labs(title = "Violin plots des types cellulaires selon le statut tabagique",
+       x = "Statut tabagique",
+       y = "Abondance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none")
+
+
+ggsave(paste0("figures/05_wilcoxtest_boxplot.png"), plot = p, width = 6, height = 4)
+ p 
+ 
+### LEs autres tests statistiques ne fonctionnent pas non plus
+
+
+
+
+
+```
+
+## Conclusion
+
+We do not find any significant dependance between the immune content and the smoking variable. 
+
+# Peter-Clack algorithm
+
+We decided to test the Peter-Clark approach to identify the causal graph.
+
+Normaly possible to to it with  `pcalg` in R, but I can't install the pakcge. I use reticulate instead. I follow this [tutorial](https://www.r-bloggers.com/2023/08/exploring-causal-discovery-with-causal-learn-and-reticulate-in-r/).
+
+
+https://www.kenkoonwong.com/blog/gcastle/
+
+## Run demo
+
+```{r}
+
+# installation
+#py_require("gcastle==1.0.3", pip = T)
+py_require(c("gcastle==1.0.3"))
+#py_install("torchvision") #, apparently the algorithm requires Torch
+py_require(c("torchvision"))
+
+gc <- import("castle")
+algo <- import("castle.algorithms")
+
+# Simulate straight-forward linear continous data structure
+
+set.seed(1)
+n <- 10000
+a <- rnorm(n) 
+b <- rnorm(n) 
+c <- 0.3*a + 0.2*b + 0.01*rnorm(n)
+d <- 0.8*c + 0.01*rnorm(n)
+# e <- -0.4*a + -0.4*d + 0.01*rnorm(n) # we will add a collider later
+
+df <- data.frame(a,b,c,d)
+
+df1 <- as.matrix(df)
+
+df |>
+  ggplot(aes(x=c,y=d)) +
+  geom_point() +
+  theme_minimal()
+
+# DAG it out
+
+dag <- dagitty('dag {
+bb="0,0,1,1"
+A [pos="0.236,0.380"]
+B [pos="0.238,0.561"]
+C [pos="0.413,0.463"]
+D [pos="0.600,0.460"]
+A -> C
+B -> C
+C -> D
+}'
+)
+
+plot(dag)
+
+# write a function to change dagitty object to adjacency matrix 
+
+dagitty_to_adjmatrix <- function(daggity_obj) {
+  edg <- dagitty:::edges(daggity_obj)
+  node_names <- dagitty:::names.dagitty(daggity_obj)
+  ans_mat <- matrix(
+    data = 0, nrow = length(node_names),
+    ncol = length(node_names),
+    dimnames = list(node_names, node_names)
+  )
+
+  ans_mat[as.matrix(edg[c("v", "w")])] <- 1
+  return(ans_mat)
+}
+
+dag_true <- dagitty_to_adjmatrix(dag)
+
+dag_true
+
+##   A B C D
+## A 0 0 1 0
+## B 0 0 1 0
+## C 0 0 0 1
+## D 0 0 0 0
+
+# write a function to plot heatmap of causal matrix
+
+hm <- function(x,title,dag_true=F) {
+  if (dag_true) {
+    color <- "green"
+  } else { color <- "blue"}
+  g <- as_tibble(x) 
+  num_nodes <- nrow(x)
+  colname_g <- c(paste0("V",1:num_nodes))
+  colnames(g) <- colname_g
+  
+  g1 <- g |>
+  mutate(Var2 = row_number()) |>
+  pivot_longer(cols = colname_g, names_to = "Var1", values_to = "Freq") |>
+  mutate(Var1 = case_when(
+    str_detect(Var1, "V") ~ str_extract(Var1,"[1-9]")))  |>
+  # mutate(Var1 = fct_relevel(c("A","B","C","D","E")))
+  ggplot(aes(x=Var1,y=Var2)) +
+  geom_tile(aes(fill=Freq), color = "black", alpha=0.5) +
+  scale_fill_gradient(low = "white", high = color) +
+  theme_minimal() +
+  scale_y_reverse() +
+  theme(legend.position = "none", panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+  ggtitle(label = title)
+
+  return(g1)
+}
+
+dag_true
+
+# Constraint-based: Peter Clark (PC) Algorithm
+
+pc <- algo$PC()
+pc$learn(data = df1)
+pc_mat <- pc$causal_matrix
+pc_g <- hm(pc_mat, "PC")
+true_g <- hm(dag_true, "true_dag",T)
+ggarrange(pc_g,true_g)
+```
+
+## Apply to AMR and immune proportions : an example with prior knowledge
+
+```{r, eval = FALSE}
+AMR_names = colnames(datAMR)
+smoking = ifelse(tcga_data$tobacco==0, 'Non-smoker', 'Smoker')
+names(smoking) = rownames(tcga_data$M)
+labels = smoking[rownames(datAMR)]
+ smoking_status = as.numeric(as.factor(labels))
+
+#par(mfrow = c(5, 10), mar = c(1, 1, 1, 1)) # marges réduites pour tout faire rentrer
+ 
+#STEP 1 : Remove edges from nodes with unconditional independence
+ 
+ cor_thres = 0.1
+  pval_thres = 0.15
+  
+  
+#Select Imm correlated with survival
+
+ res = apply(datIMM, 2, function(x) {
+  model = survival::coxph(survival::Surv(tcga_data$time, tcga_data$status) ~ x)
+   summary(model)$coefficients[, "Pr(>|z|)"]
+})
+summary(res)
+immune_names = names(which(res < pval_thres)) # select imm -> survival in the graph
+length(immune_names)
+ 
+#Select DMR correlated with smoking status
+res = apply(datAMR, 2, function(x) {
+  cor.test(x, smoking_status)$estimate
+  #cor.test(x, smoking_status)$p.value
+})
+
+AMR_names = names(which(abs(res) > cor_thres))
+length(AMR_names)
+
+#Select DMR correlated with immune status
+res = apply(datAMR, 2, function(x) {
+  cor.test(x, datIMM$all)$estimate
+})
+AMR_names = names(which(abs(res) > cor_thres))
+length(AMR_names)
+
+#STEP 2 : Remove edges from nodes with conditional independence
+
+# we choose a candidate approach, with positive in serial mediation
+amr_ids <- unique(gsub("^((AMR\\d+)).*", "\\1", idx_wLF))
+
+AMR = amr_ids[1]
+AMR = "AMR2"
+imm = immune_names[1]
+imm = "all"
+
+# check the link between tobacco and survival
+mod_tobacco = survival::coxph(survival::Surv(tcga_data$time, tcga_data$status) ~  smoking_status) 
+summary(mod_tobacco)$coefficients[, "Pr(>|z|)"] # not significant : no link between tobacco and survival
+
+# check the link between the AMR and survival
+mod_AMR = survival::coxph(survival::Surv(tcga_data$time, tcga_data$status) ~  datAMR[,AMR])
+summary(mod_AMR)$coefficients[, "Pr(>|z|)"]
+
+# Which node coefficient will lose its significance between AMR and imm ?
+mod_part = survival::coxph(survival::Surv(tcga_data$time, tcga_data$status) ~ datIMM[ ,imm] + datAMR[,AMR])
+summary(mod_part)
+# if AMR loses its significance, it means the edge from AMR to surv can be removed, because AMR and surv are independant when imm is controlled. 
+#we have then tob -> AMR - imm -> surv.
+#We then need to orient the edge from AMR to imm. If AMR is a collider (tob -> AMR <- imm), then imm and tob would become dependent when we control for AMR. 
+
+dat = data.frame(
+  AMR = datAMR[,AMR],
+  smoking_status = as.numeric(as.factor(labels)) -1,
+  imm = datIMM[ ,imm]
+)
+mod = glm(smoking_status~ ., data = dat, family = binomial(link = "logit"))
+summary(mod)
+
+# If the p-value of imm is not significantm it means that tob and imm are not dependant when we control for AMR, then AMR is not a collider, then we can orient the edge from AMR to imm (as we know the orientation tob -> imm.
+```
+
+# Analysis for the paper
+
+## Test and plot Immune fraction / survival 
+
+```{r}
+
+ pval_thres = 0.15
+
+ 
+ #Select Imm correlated with survival
+ 
+ colnames(datIMM)
+ colnames(datIMM) = c("Macrophages", "B cells", "T cells", "NK", "DCs", "Tot. Imm." )
+  res = apply(datIMM, 2, function(x) {
+   model = survival::coxph(survival::Surv(tcga_data$time, tcga_data$status) ~ x + tcga_data$age + tcga_data$gender +  tcga_data$grade)
+    summary(model)$coefficients[, "Pr(>|z|)"]
+ })
+  
+print(res)
+ immune_names = names(which(res[1,] <= pval_thres)) # select imm -> survival in the graph
+ length(immune_names)
+ 
+  #Plot Kaplan Meyer curves
+
+selected_vars <- colnames(datIMM)[1:6]  
+plots <- list()
+
+
+for (var in selected_vars) {
+  
+  # Dichotomize based on the median
+  group <- ifelse(datIMM[[var]] >= median(datIMM[[var]], na.rm = TRUE), "High", "Low")
+  group <- factor(group, levels = c("Low", "High"))
+  plot_data <- data.frame(time = tcga_data$time,  event = tcga_data$status, group = group)
+  
+  # Create the survival object
+  surv_obj <- survival::Surv(time = tcga_data$time, event = tcga_data$status)
+
+  # Kaplan-Meier survival estimation
+  fit <- survival::survfit(surv_obj ~ group)
+
+  # Generate the plot with ggsurvplot
+  p <- ggsurvplot(
+    fit,
+    data = plot_data,
+    risk.table = FALSE,
+    pval = TRUE,
+    title = var,
+    legend.title = var,
+    legend.labs = c("Low", "High") ,
+    palette = c("#E7B800", "#2E9FDF") 
+  )
+  
+  plots[[var]] <- p
+}
+
+#  Display the 6 survival curves in a 2x3 grid
+combined_plot = arrange_ggsurvplots(plots, ncol = 2, nrow = 3)
+
+ggsave("~/projects/thema_surv/real_data/figures/05_survival_plot.pdf", plot = combined_plot, width = 7, height = 10, dpi = 300)
+
+```
+
+
+## Run causal discovery
+
+```{r}
+
+# Data processing
+AMR_names = colnames(datAMR)
+smoking = ifelse(tcga_data$tobacco==0, 'Non-smoker', 'Smoker')
+names(smoking) = rownames(tcga_data$M)
+labels = smoking[rownames(datAMR)]
+smoking_status = as.numeric(as.factor(labels))
+
+pval_thres = 0.1
+
+# details of each model for publication:
+
+prop100= datIMM[,"Tot. Imm."]*100 #to interpret the HR has increase of 1 unit (1% of immune infiltration) lead to HR likely to dire than persons with 1% less
+mod = survival::coxph(survival::Surv(tcga_data$time, tcga_data$status) ~ prop100 + tcga_data$age + tcga_data$gender +  tcga_data$grade)
+summary(mod)
+
+prop100= datIMM[,"B cells"]*100 #to interpret the HR has increase of 1 unit (1% of immune infiltration) lead to HR likely to dire than persons with 1% less
+mod = survival::coxph(survival::Surv(tcga_data$time, tcga_data$status) ~ prop100 + tcga_data$age + tcga_data$gender +  tcga_data$grade)
+summary(mod)
+
+prop100= datIMM[,"DCs"]*100 #to interpret the HR has increase of 1 unit (1% of immune infiltration) lead to HR likely to dire than persons with 1% less
+mod = survival::coxph(survival::Surv(tcga_data$time, tcga_data$status) ~ prop100 + tcga_data$age + tcga_data$gender +  tcga_data$grade)
+summary(mod)
+
+# Latent factor assessment
+
+cor = apply(LFs, 2, function(x) {
+  cor.test(x, smoking_status)$p.value
+})
+
+cor
+
+
+# Step 1: Unconditional independence resting
+
+## Tobacco-Survival association: Cox proportional hazards model
+
+SURV_TOB = survival::coxph(survival::Surv(tcga_data$time, tcga_data$status) ~  smoking_status + tcga_data$age + tcga_data$gender +  tcga_data$grade)
+summary(SURV_TOB)
+
+## Tobacco-Immune associations: Linear regression models
+
+IMMtot_TOB = lm(datIMM[ ,"Tot. Imm."]~smoking_status + tcga_data$age + tcga_data$gender +  tcga_data$grade)    
+summary(IMMtot_TOB) 
+
+IMMbcell_TOB = lm(datIMM[ ,"B cells"]~smoking_status + tcga_data$age + tcga_data$gender +  tcga_data$grade)    
+summary(IMMbcell_TOB) 
+
+IMMDCs_TOB = lm(datIMM[ ,"DCs"]~smoking_status + tcga_data$age + tcga_data$gender +  tcga_data$grade)
+summary(IMMDCs_TOB) 
+
+
+AMR_names = tobacco_AMR$AMR_info$AMR
+
+num_res = list()
+
+for (AMR in AMR_names){ 
+  
+  for (imm in immune_names) {
+   
+    
+       pair = paste(AMR, "-", imm, sep = "")
+ print(paste0("Testing AMR:", AMR, " and Immune:", imm))
+ 
+ # Check consisty of T -> AMR -> S path
+  
+ #  Check the link between tobacco and the AMR 
+    mod_tob = lm(datAMR[,AMR]~smoking_status + tcga_data$age + tcga_data$gender +  tcga_data$grade)
+   tob_sign =  summary(mod_tob)$coefficients[2,4]  < pval_thres 
+   
+    #  check the link between the AMR and survival
+    mod_AMR = survival::coxph(survival::Surv(tcga_data$time, tcga_data$status) ~  datAMR[,AMR] + tcga_data$age + tcga_data$gender +  tcga_data$grade)
+   AMR_sign =  summary(mod_AMR)$coefficients[1, "Pr(>|z|)"] < pval_thres 
+   
+   # Step 2: Conditional independence testing
+ 
+   if (tob_sign == TRUE & AMR_sign == TRUE) {
+  
+    print(paste0(" AMR:", AMR, " and Immune:", imm, " is kept for doanwstream analysis. "))
+   # (Model 1) Which node coefficient will lose its significance between AMR and imm ?
+    mod_part = survival::coxph(survival::Surv(tcga_data$time, tcga_data$status) ~  datIMM[ ,imm] + datAMR[,AMR]  + tcga_data$age + tcga_data$gender +  tcga_data$grade)
+    summary(mod_part)
+    part_surv_sign = summary(mod_part)$coefficients[1:2, "Pr(>|z|)"] 
+
+   
+    # (Model 2) check the link between the immune and smoking status when controlling for AMR
+    dat = data.frame(
+      smoking_status = as.numeric(as.factor(labels)) -1,
+             AMR = datAMR[,AMR],
+      imm = datIMM[ ,imm],
+      age = tcga_data$age,
+                 gender = tcga_data$gender,
+                 grade =   tcga_data$grade
+    )
+    
+    mod = glm(smoking_status~ ., data = dat, family = binomial(link = "logit"))
+    summary(mod)
+    part_imm_sign = summary(mod)$coefficients[2:3,4] # check if imm is significant
+    
+    num_res[[pair]] = c( part_surv_sign,
+                        part_imm_sign)
+    names(num_res[[pair]]) = c("part_IMM_sign_to_surv", 
+                               "part_AMR_sign_to_surv_when_IMM_controlled",
+                               "part_AMR_sign_to_smoking",
+                               "part_IMM_sign_to_smoking_when_AMR_controlled")
+   } else {
+     print(paste0(" AMR:", AMR, " and Immune:", imm, " is not kept for doanwstream analysis. "))
+     #num_res[[pair]] = c(NA, NA, NA, NA)
+     #names(num_res[[pair]]) = c("part_IMM_sign_to_surv", 
+    #                            "part_AMR_sign_to_surv_when_IMM_controlled",
+     #                           "part_AMR_sign_to_smoking",
+     #                           "part_IMM_sign_to_smoking_when_AMR_controlled")
+   }
+
+  }
+
+
+}
+num_res = do.call(rbind, num_res)
+num_res=data.frame(num_res)
+
+# Directed acyclic graph 1
+res_CAT1 = num_res[  num_res$part_IMM_sign_to_surv < pval_thres &
+            num_res$part_AMR_sign_to_surv_when_IMM_controlled < pval_thres, ]
+res_CAT1
+rownames(res_CAT1)
+saveRDS(rownames(res_CAT1), file = "~/projects/thema_surv/real_data/results/05_DAG_validated_CAT1.rds")
+
+# Directed acyclic graph 2
+res_CAT2 = num_res[  num_res$part_IMM_sign_to_surv < pval_thres &
+            num_res$part_AMR_sign_to_surv_when_IMM_controlled >= pval_thres, ]
+rownames(res_CAT2)
+saveRDS(rownames(res_CAT2), file = "~/projects/thema_surv/real_data/results/05_DAG_validated_CAT2.rds")
+
+
+plot_part_cor = function(mat){
+  
+  colnames(mat) = c("Model 1 : S~I+A, pval I", 
+                    "Model 1 : S~I+A, pval A",
+                    "Model 2 : T~I+A, pval A",
+                    "Model 2 : T~I+A, pval I")
+  
+  df <- data.frame(
+    cell_type = rep(rownames(mat), times = ncol(mat)),
+    variable = rep(colnames(mat), each = nrow(mat)),
+    value = as.vector(as.matrix(mat))
+  )
+
+  df$abs_value <- abs(df$value)
+  df$significance <- ifelse(df$value <= 0.1, "Significant", "Not Significant")
+  
+
+  p = ggplot(df, aes(x = variable, y = cell_type,
+                     size = abs_value,
+                     color = value,
+                     shape = significance)) +
+    geom_point() +
+    scale_size(range = c(2, 8)) +
+    scale_color_gradient(low = "darkblue", high = "lightblue") +
+    scale_shape_manual(values = c("Significant" = 16, "Not Significant" = 17)) +  # 16 = rond, 17 = triangle
+    theme_minimal() +
+    labs(
+      title = "Partial correlation",
+      x = "Linear models",
+      y = "Pairs",
+      color = "P-value",
+      size = "Intensity",
+      shape = "Significativity"
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  
+  return(p)
+}
+
+pdf("~/projects/thema_surv/real_data/figures/05_CAT1_plot.pdf", width = 5, height =5)
+plot_part_cor(mat = res_CAT1)
+dev.off()
+
+pdf("~/projects/thema_surv/real_data/figures/05_CAT2_plot.pdf", width = 5, height =5)
+plot_part_cor(mat = res_CAT2)
+dev.off()
+
+
+
+
+
+
+
+```
+
+## Run extra analysis
+```{r, eval = FALSE}
+
+res = list()
+for (AMR in AMR_names){ 
+  
+  for (imm in immune_names) {
+  # if (imm %in% colnames(datIMM)) {
+   
+    
+       pair = paste(AMR, "-", imm, sep = "")
+     print(pair)
+    #AMR = amr_id
+    imm = imm
+ print(paste0("Testing AMR:", AMR, " and Immune:", imm))
+ 
+  # (0) check the link between tobacco and the AMR 
+    mod_tob_imm = lm(datIMM[ ,imm]~smoking_status + tcga_data$age + tcga_data$gender +  tcga_data$grade)
+   tob_imm_sign =  summary( mod_tob_imm)$coefficients[2,4]  < pval_thres 
+   
+ 
+   # (1) check the link between tobacco and the AMR 
+    mod_tob = lm(datAMR[,AMR]~smoking_status + tcga_data$age + tcga_data$gender +  tcga_data$grade)
+   tob_sign =  summary(mod_tob)$coefficients[2,4]  < pval_thres 
+   
+    # (2) check the link between the AMR and survival
+    mod_AMR = survival::coxph(survival::Surv(tcga_data$time, tcga_data$status) ~  datAMR[,AMR] + tcga_data$age + tcga_data$gender +  tcga_data$grade)
+   AMR_sign =  summary(mod_AMR)$coefficients[1, "Pr(>|z|)"] < pval_thres # check if AMR is significan
+    
+   # (3) Which node coefficient will lose its significance between AMR and imm ?
+    mod_part = survival::coxph(survival::Surv(tcga_data$time, tcga_data$status) ~  datIMM[ ,imm] + datAMR[,AMR]  + tcga_data$age + tcga_data$gender +  tcga_data$grade)
+    part_surv_sign = summary(mod_part)$coefficients[1:2, "Pr(>|z|)"] < pval_thres
+    
+     # (4) Which node coefficient will lose its significance between AMR and imm ?
+    mod_imm = lm(datAMR[,AMR]~ datIMM[ ,imm]+ tcga_data$age + tcga_data$gender +  tcga_data$grade)
+   imm_sign =  summary(mod_tob)$coefficients[2,4]  < pval_thres 
+   
+    # (5) check the link between the immune and smoking status when controlling for AMR
+   # If the p-value of imm is not significantm it means that tob and imm are not dependant when we control for AMR, then AMR is not a collider, then we can orient the edge from AMR to imm (as we know the orientation tob -> imm.
+    dat = data.frame(
+      AMR = datAMR[,AMR],
+      smoking_status = as.numeric(as.factor(labels)) -1,
+      imm = datIMM[ ,imm],
+      age = tcga_data$age,
+                 gender = tcga_data$gender,
+                 grade =   tcga_data$grade
+    )
+   # dat = cbind(dat,LFs)
+    
+    mod = glm(smoking_status~ ., data = dat, family = binomial(link = "logit"))
+    summary(mod)
+    part_imm_sign = summary(mod)$coefficients[2:3,4] < pval_thres # check if imm is significant
+    
+    res[[pair]] = c(tob_imm_sign, tob_sign, AMR_sign, part_surv_sign,imm_sign, part_imm_sign)
+    names(res[[pair]]) = c("Tob_sign_to_IMM","Tob_sign_to_AMR", "AMR_sign_to_surv", "part_IMM_sign", "part_DRM_sign_when_IMM_controlled", "IMM_sign_to_AMR","part_AMR_sign","IMM_sign_to_smoking_when_AMR_controlled")
+
+ # } else {
+  #  print(paste("Immune", imm, "not in immune_names. Skipping..."))
+  #  next
+  }
+
+
+}
+
+res = do.call(rbind, res)
+
+DT::datatable(res)
+
+
+
+data_num = res*1
+
+
+pdf(paste0("~/projects/thema_surv/real_data/figures/05_serialmed_cand_woLF_heatmap_AMR.pdf"), width = 7, height = 10)
+
+# Heatmap sans arbre, avec labels, sans valeurs
+pheatmap(data_ordered,
+         cluster_rows = FALSE,      # Pas d’arbre
+         cluster_cols = FALSE,      # Colonnes fixes
+         show_rownames = TRUE,      # Afficher les AMR à gauche
+         show_colnames = TRUE,
+         display_numbers = FALSE,   # Ne pas afficher les 0/1
+         legend = TRUE,             # Afficher l’échelle
+         color = c("white", "violet"),
+         main = paste0("Conditionnal independance tests for ", imm))
+
+dev.off()
+
+
+res[which(res$Tob_sign_to_AMR == TRUE & res$AMR_sign_to_surv == TRUE &  res$part_IMM_sign == TRUE), ]
+
+res = data.frame(res)
+
+#we define 3 categories of AMR based on the p-value of the coonditional tests
+
+#CAT 1 
+res_CAT1 = res[which(res$Tob_sign_to_AMR == TRUE &
+            res$AMR_sign_to_surv == TRUE &
+            res$part_IMM_sign == TRUE &
+            res$part_DRM_sign_when_IMM_controlled == TRUE), ]
+res_CAT1
+rownames(res_CAT1)
+saveRDS(rownames(res_CAT1), file = "~/projects/thema_surv/real_data/results/05_DAGvalidated_CAT1.rds")
+
+#CAT 2
+res_CAT2 = res[which(res$Tob_sign_to_AMR == TRUE &
+            res$AMR_sign_to_surv == TRUE &
+            res$part_IMM_sign == TRUE &
+            res$part_DRM_sign_when_IMM_controlled == FALSE), ]
+res_CAT2
+saveRDS(rownames(res_CAT2), file = "~/projects/thema_surv/real_data/results/05_DAGvalidated_CAT2.rds")
+rownames(res_CAT2)
+
+
+# Clusterer les lignes pour obtenir un ordre
+row_order <- hclust(dist(data_num))$order
+data_ordered <- data_num[row_order, ]
+
+
+
+
+
+```
+
+
+
+
+## Conclusion 
+
+![Causal DAG](figures/causal_schema.png)
+
+```{r}
+sessionInfo()
+```
+
+```{r, crap, eval=FALSE}
+# df_thema = data.frame(
+#   DMR = datAMR[,DMR],
+#     smoking_status = as.numeric(as.factor(labels)),
+#   #DMR = datAMR[[name]],
+#   imm = datIMM[ ,imm]
+#   # imm_all = datIMM$Macrophages
+# )
+# 
+# summary(lm(smoking_status~imm+DMR,df_thema))
+# 
+# summary(lm(smoking_status~imm,df_thema))
+# 
+# abs(cor(df_thema)) < 0.01
+# 
+# pc$learn(df_thema)
+# pc_mat <- pc$causal_matrix
+# pc_g <- hm(pc_mat, "PC")
+# 
+# pc_g
+# 
+# for(name in DMR_names){
+# print(name)
+# df_thema = data.frame(
+#   #DMR = datAMR$DMR8,
+#     smoking_status = as.numeric(as.factor(labels)),
+#   DMR = datAMR[[name]],
+#   imm_all = datIMM$all
+#   # imm_all = datIMM$Macrophages
+# )
+# pc$learn(df_thema)
+# pc_mat <- pc$causal_matrix
+# pc_g <- hm(pc_mat, name)
+# 
+# #pc_g
+# 
+# plot(pc_g)
+# }
+```
+
+```{r, eval=TRUE}
+knitr::knit_exit()
+```
+
+
+```{r}
+Sys.info()
+```
