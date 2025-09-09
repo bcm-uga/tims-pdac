@@ -1,3 +1,9 @@
+###############
+# this alter version allow to collect all pvalues from SIS  step
+###############
+
+
+
 
 # This is the function for our proposed method for high-dimensional Cox mediation analysis
 #' High-dimensional mediation analysis for survival data

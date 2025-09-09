@@ -10,7 +10,7 @@ param3 = "n"
 ##########
 # 0 B effect plot
 #########
-rdsFileNames = read.csv("~pittionf/Datas/projects/thema_surv/simulations/v2-10/csv/mean_A_mean_B_n_p_10000_n_n_pcp_100_mA_mean_A_mB_mean_B_sA_0.1_sB_0_ro_0_overlap_0.8_lambda_0.1_aggregated_results.csv", header = FALSE)
+rdsFileNames = read.csv("~data/v2-10/csv/mean_A_mean_B_n_p_10000_n_n_pcp_100_mA_mean_A_mB_mean_B_sA_0.1_sB_0_ro_0_overlap_0.8_lambda_0.1_aggregated_results.csv", header = FALSE)
 
 df = data.frame()
 for (f in seq_along(rdsFileNames[, 1])) {
@@ -92,7 +92,7 @@ ggsave("figures/step1_results_0_Beffect.pdf", p_zeroB, width = 10.5, height = 7)
 ##########""
 # 0 A effect plot
 #########
-rdsFileNames = read.csv("~pittionf/Datas/projects/thema_surv/simulations/v2-11/csv/mean_A_mean_B_n_p_10000_n_n_pcp_100_mA_mean_A_mB_mean_B_sA_0_sB_0.1_ro_0.5_overlap_0.8_lambda_0.1_aggregated_results.csv", header = FALSE)
+rdsFileNames = read.csv("~data/v2-11/csv/mean_A_mean_B_n_p_10000_n_n_pcp_100_mA_mean_A_mB_mean_B_sA_0_sB_0.1_ro_0.5_overlap_0.8_lambda_0.1_aggregated_results.csv", header = FALSE)
 df = data.frame()
 for (f in seq_along(rdsFileNames[, 1])) {
   f1score = readRDS(rdsFileNames[f,1])
@@ -179,8 +179,8 @@ ggsave("figures/step1_results_0_Aeffect.pdf", p_zeroA, width = 10.5, height = 7)
 
 
 # load data
-simus = read.csv("~/Datas/projects/thema_surv/simulations/v2-10/csv/all_simu.csv", header = FALSE)
-step1s = read.csv("~/Datas/projects/thema_surv/simulations/v2-10/csv/all_step1s.csv", header = FALSE)
+simus = read.csv("data/v2-10/csv/all_simu.csv", header = FALSE)
+step1s = read.csv("data/v2-10/csv/all_step1s.csv", header = FALSE)
 
 
 # function

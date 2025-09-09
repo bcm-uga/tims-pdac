@@ -546,7 +546,7 @@ surv_param_med_test = function(object,
     parallel::stopCluster(cluster)
     close(pb)
   }
-  res = list(pvalues = pvalues)
+  res = list(pvalues = pvalues, survival_distribution = best_distribution)
 }
 
 ##' @title The function hdmax2::run_AS() evaluates the association 
@@ -920,10 +920,10 @@ run_AS_surv_param_alter = function(exposure,
                                    covar = covars)
   }
   pval2 = as.double(res_reg2$pvalues)
-  #survival_distribution = res_reg2$survival_distribution
+  survival_distribution = res_reg2$survival_distribution
   names(pval2) = colnames(M)
-  reg2 = list(pval2)#, survival_distribution)
-  names(reg2) = c("pval")#, "survival_distribution")
+  reg2 = list(pval2, survival_distribution)
+  names(reg2) = c("pval", "survival_distribution")
   res[[2]] = reg2
   
   ########################
@@ -962,12 +962,11 @@ run_AS_surv_param_alter = function(exposure,
     covar, 
     suppl_covar,
     survival_time_input, 
-    censoring_status_input#,
-    #survival_distribution
+    censoring_status_input
   )
-  names(input) = c("exposure_input", "expo_var_types", "expo_var_ids" , "covar", "suppl_covar", "survival_time_input", "censoring_status_input")#, "survival_distribution")
+  names(input) = c("exposure_input", "expo_var_types", "expo_var_ids" , "covar", "suppl_covar", "survival_time_input", "censoring_status_input")
   res[[5]] = input
-  names(res) <- c("AS_1", "AS_2", "max2_pvalues",  "max2_each_var_pvalues", "input")
+  names(res) <- c("AS_1", "AS_2", "max2_pvalues", "survival_distribution", "max2_each_var_pvalues", "input" )
   class(res) = "hdmax2_step1"
   return(res)
 }

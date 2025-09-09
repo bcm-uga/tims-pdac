@@ -165,16 +165,19 @@ amr$CI_2.5 <- med_tobacco_dnam_AMR$step2_res_50$CI_2.5
 amr$CI_97.5 <- med_tobacco_dnam_AMR$step2_res_50$CI_97.5
 amr$signif <- ifelse(amr$acme_pval <= 0.05, "pval <= 0.05", "n.s.")
 amr$amr_id = med_tobacco_dnam_AMR$step2_res_50$feat
+amr$surv_dist = med_tobacco_dnam_AMR$all_step2_res$effects$univariate$best_distribution
 # Ordonner les AMRs selon l'effet estimé
 ordered_amr_feat <- amr$amr_id[order(amr$est)]
 saveRDS(ordered_amr_feat,"results/ordered_amr_feat.rds")
+
 
 # Créer le plot
 p_ACME <- ggplot(amr, aes(
   x = est,
   y = factor(amr_id, levels = ordered_amr_feat)
   ,
-  color = est <= 0,
+  color = surv_dist,
+  #color = est <= 0,
   shape = signif
 )) +
   geom_vline(xintercept = 0, linetype = "dashed") +
@@ -191,30 +194,37 @@ p_ACME <- ggplot(amr, aes(
     panel.spacing = unit(0.01, "lines"),
     axis.ticks = element_blank()
   ) +
-  scale_color_manual(values = c("skyblue", "red"), guide = "none") +
+  #scale_color_manual(values = c("skyblue", "red"), guide = "none") +
   scale_shape_manual(values = c("pval <= 0.05" = 16, "n.s." = 17), guide = guide_legend(title = "Significance"))
 
 #save plot
+fig_height = 8
+fig_width = 6
+
 ggsave(
   "figures/03_TCGA_tobacco_AMR_fdr0_05_acme_plot_V2_K8_corrected.pdf",
   p_ACME,
-  width = 6,
-  height = 8,
+  width = fig_width,
+  height = fig_height,
   units = "in"
 )
 
-#saveRDS(amr, "results/03_TCGA_selected_AMR_complete_info_V2_K8_corrected.rds")
+saveRDS(amr, "results/03_TCGA_selected_AMR_complete_info_V2_K8_corrected.rds")
 
 
 ###############
-# Acme plot pseudo log version
+# pseudo log version
 ##############
+library(ggplot2)
+library(scales)   # <- nécessaire pour pseudo_log_trans()
 
+# votre code de préparation de amr… puis :
 
-p_ACME_plog <- ggplot(amr, aes(
+p_ACME_log <- ggplot(amr, aes(
   x     = est,
   y     = factor(amr_id, levels = ordered_amr_feat),
-  color = est <= 0,
+  color = surv_dist,
+  #color = est <= 0,
   shape = signif
 )) +
   geom_vline(xintercept = 0, linetype = "dashed") +
@@ -226,21 +236,25 @@ p_ACME_plog <- ggplot(amr, aes(
     y     = "Mediators",
     x     = "Effet (pseudo-log10)"
   ) +
-  scale_color_manual(values = c("skyblue", "red"), guide = "none") +
+  scale_color_manual(
+    values = c("magenta3", "mediumseagreen" , "orange2"),
+    name   = "Survival distribution"
+  )+
   scale_shape_manual(
     values = c("pval <= 0.05" = 16, "n.s." = 17),
     guide  = guide_legend(title = "Significance")
   ) +
   scale_x_continuous(
     trans   = pseudo_log_trans(base = 10),
-    # bornes
+    # choisissez ici des bornes qui couvrent bien vos données
     breaks  = c(-100, -10, -1, 0, 1, 10, 100),
+    # labels = fonction identité pour afficher les valeurs “originales”
     labels  = function(x) x
   )
 
 ggsave(
   "figures/03_TCGA_tobacco_AMR_acme_pseudolog.pdf",
-  p_ACME_plog,
+  p_ACME_log,
   width  = 6,
   height = 8,
   units  = "in"
