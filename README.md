@@ -8,11 +8,25 @@ This repository contains all scripts and resources to reproduce the analyses and
 
 ## Repository structure
 
-### Analysis
+### Root files
+- **`master_simulation.R`** — runs the full simulation study.  
+- **`master_pdac.R`** — runs the real data analysis (TCGA-PAAD).  
+- **`master_figures.md`** — documentation and scripts to reproduce all manuscript figures.  
 
-- **`master_simulation.R`** — runs the simulation study.  
-- **`master_pdac.R`** — runs the analysis on real data (TCGA-PAAD).
-- **`master_figures.md`** — details which results and scripts files are required to generate the figures.  
+### Folders
+- **`simulations/`** — contains scripts and functions used in the simulation framework.  
+- **`real_data/`** — contains scripts for preprocessing and analyzing TCGA-PAAD data.  
+- **`Figures/`** — contains scripts for generating each figure from the manuscript.  
+
+---
+
+## Analyses
+
+- **Simulation study**:  
+  Run with `master_simulation.R`. Evaluates the performance of HDMAX2-surv under multiple scenarios.  
+
+- **Real data analysis (TCGA-PAAD)**:  
+  Run with `master_pdac.R`. Applies HDMAX2-surv to study how tobacco exposure influences pancreatic adenocarcinoma survival via DNA methylation and immune infiltration.  
 
 Due to size constraints, full processed results can be downloaded from **Zenodo**: [DOI: XXX].
 
@@ -23,11 +37,9 @@ Due to size constraints, full processed results can be downloaded from **Zenodo*
 The scripts are written in **R**.  
 We recommend using R (≥ 4.2.0) with the following packages installed:  
 - `survival`  
-- `glmnet`  
 - `mediation`  
-- `data.table`  
 - `tidyverse`  
-- `igraph`  
+- `hdmax2`  
 - (and any additional packages listed at the top of each script).  
 
 ---
