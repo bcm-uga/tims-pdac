@@ -27,17 +27,30 @@
 | Figure6      | tcga_pdac_mediation/data/TCGA_PAAD/platform_meth_icgc.rds                                           |
 | Figure6      | tcga_pdac_mediation/data/TCGA_PAAD/study_TCGA-PAAD_trscr.rds                                        |
 |              |                                                                                                     |
-| Supp_Figure3 |  simulation/v2-03                                                                                   |
+| Supp_Figure3 | simulation/v2-03                                                                                    |
 |              |                                                                                                     |
-| Supp_Figure4 |  simulation/v2-03                                                                                   |
+| Supp_Figure4 | simulation/v2-03                                                                                    |
 |              |                                                                                                     |
-| Supp_Figure6 |  simulation/v2-11                                                                                   |
+| Supp_Figure6 | simulation/v2-11                                                                                    |
 |              |                                                                                                     |
-| Supp_Figure7 |  simulation/v2-10                                                                                   |
+| Supp_Figure7 | simulation/v2-10                                                                                    |
 |              |                                                                                                     |
-| Supp_Figure8 |  simulation/v2-10                                                                                   |
+| Supp_Figure8 | simulation/v2-10                                                                                    |
 |              |                                                                                                     |
-| Supp_Figure10|  tcga_pdac_mediation/results/01_tcga_data_expo_deconv.rds                                           |
-| Supp_Figure10|  tcga_pdac_mediation/results/03_tcga_top50_tobacco_CPG_fdr0_05_V2_K8_corrected.rds                  |
-| Supp_Figure10|  results/03_tcga_top50_tobacco_CPG_fdr0_1_V2_K8_corrected.rds                                       |
+| Supp_Figure10| tcga_pdac_mediation/results/01_tcga_data_expo_deconv.rds                                            |
+| Supp_Figure10| tcga_pdac_mediation/results/03_tcga_top50_tobacco_CPG_fdr0_05_V2_K8_corrected.rds                   |
+| Supp_Figure10| results/03_tcga_top50_tobacco_CPG_fdr0_1_V2_K8_corrected.rds                                        |
+|              |                                                                                                     |
+| Supp_Figure12| tcga_pdac_mediation/results/01_tcga_data_expo_deconv.rds                                            |
+| Supp_Figure12| tcga_pdac_mediation/results/03_tcga_significative_from_top50_tobacco_AMR_fdr0_05_V2_K8_corrected.rds|
+| Supp_Figure12| tcga_pdac_mediation/results/03_tcga_AMR_mean_meth_top50_fdr0_05_V2_K8_corrected.csv                 |
+| Supp_Figure12| tcga_pdac_mediation/data/TCGA_PAAD/platform_meth_icgc.rds                                           |
+| Supp_Figure12| tcga_pdac_mediation/data/TCGA_PAAD/study_TCGA-PAAD_trscr.rds                                        |
+|              |                                                                                                     |
+| Supp_Figure14| tcga_pdac_mediation/results/01_tcga_data_expo_deconv.rds                                            |
+| Supp_Figure14| tcga_pdac_mediation/results/03_tcga_consensus_deconv_immune_cells.csv                               |
+| Supp_Figure14| tcga_pdac_mediation/results/03_tcga_significative_from_top50_tobacco_AMR_fdr0_05_V2_K8_corrected.rds|
+| Supp_Figure14| tcga_pdac_mediation/results/03_tcga_AMR_mean_meth_top50_fdr0_05_V2_K8_corrected.csv                 |
+| Supp_Figure14| tcga_pdac_mediation/results/02_tcga_med_tobacco_dnam_V2_K8_corrected.rds                            |
+| Supp_Figure14| tcga_pdac_mediation/results/05_signLFs_by_pairs-A-I.rds                                             |
 |              |                                                                                                     |
