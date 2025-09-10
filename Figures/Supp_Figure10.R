@@ -8,13 +8,13 @@ library(ggplot2)
 ## CpG mediation results
 ############################################################################
 # load data
-tcga_data = readRDS("results/01_tcga_data_expo_deconv.rds")
+tcga_data = readRDS("tcga_pdac_mediation/results/01_tcga_data_expo_deconv.rds")
 
 ###################################
 ## acme plot  FDR 0.05
 ###################################
 
-med_tobacco_dnam_CpG = readRDS("results/03_tcga_top50_tobacco_CPG_fdr0_05_V2_K8_corrected.rds")
+med_tobacco_dnam_CpG = readRDS("tcga_pdac_mediation/results/03_tcga_top50_tobacco_CPG_fdr0_05_V2_K8_corrected.rds")
 
 cpg = data.frame(med_tobacco_dnam_CpG$step2_res_4)
 
