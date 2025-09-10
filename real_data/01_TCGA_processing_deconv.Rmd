@@ -58,10 +58,6 @@ probes_chr_GeneSymbol = data_meth$platform[probes_chr,]$Gene_Symbol
 probes_chr_End = data_meth$platform[probes_chr,]$End
 dat_meth = dat_meth[probes_chr,]
 
-# remove rows summing to 0 - USELESS
-#idx_zero = (rowSums(dat_meth) == 0)
-#dat_meth = dat_meth[!idx_zero,]
-#dim(dat_meth)
 
 # keep only samples w/ follow up (n=143)
 dat_trans = dat_trans[, !is.na(meta$Follow.up.days) & !is.na(meta$Censored.1.yes.0.no) & meta$Follow.up.days!=0]

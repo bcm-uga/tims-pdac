@@ -6,8 +6,6 @@
 ## ===============================
 ## 0) Preamble (sources & parameters)
 ## ===============================
-# We assume that the functions are defined in the sourced scripts.
-# This is only to illustrate the logic, not to run the analysis.
 
 # -- Data generation
 source("simulations/simulate_survival_mediation_data.R")
@@ -71,7 +69,7 @@ generated_result <- list(
   X_bin      = res$X_bin,              # binary exposure (used below)
   A_effect   = res$A,                  # simulated A effects
   B_effect   = res$B,                  # simulated B effects
-  mediators  = res$mediators,          # ground truth causal mediators
+  mediators  = res$mediators,          # causal mediators
   file       = res$file,               # file name (if saving)
   param_values = param_values,
   meta_data    = meta_data
@@ -176,7 +174,7 @@ f1_table <- data.frame(
 ## ==========================================
 
 # Take one Step 1 result:
-hdmax2_step1_out <- step1_param$res   # <<< choose param / aalen / hima
+hdmax2_step1_out <- step1_param$res  
 
 # Mediator matrix from simulated variables
 simu_var <- generated_result
