@@ -7,14 +7,14 @@ library(scales)
 library(LightLogR) 
 
 # load data
-med_tobacco_dnam_AMR = readRDS("results/03_tcga_top50_tobacco_AMR_fdr0_05_V2_K8_corrected.rds")
-med_tobacco_dnam_CpG = readRDS("results/02_tcga_med_tobacco_dnam_V2_K8_corrected.rds")
+med_tobacco_dnam_AMR = readRDS("tcga_pdac_mediation/results/03_tcga_top50_tobacco_AMR_fdr0_05_V2_K8_corrected.rds")
+med_tobacco_dnam_CpG = readRDS("tcga_pdac_mediation/results/02_tcga_med_tobacco_dnam_V2_K8_corrected.rds")
 pf = readRDS("results/03_platform_info_tcga_meth.rds")
 
-tcga_data = readRDS("results/01_tcga_data_expo_deconv.rds")
+tcga_data = readRDS("tcga_pdac_mediation/results/01_tcga_data_expo_deconv.rds")
 
 ############################################################################
-## manhanttan plot
+## manhattan plot
 ############################################################################
 # prepare data
 
@@ -35,17 +35,17 @@ annot_df$gene <- pf$Gene_Symbol_unique
 
 
 get_major_genes_for_amrs <- function(amr_list, annot_df) {
-  # Initialiser le vecteur résultat
+  # Initialize the result vector
   major_genes <- character(length(amr_list))
   
-  # Boucle sur chaque AMR
+  # Loop over each AMR
   for (i in seq_along(amr_list)) {
     probes <- amr_list[[i]]
     
-    # Sélection des gènes associés aux sondes de cette AMR
+    # Select genes associated with probes of this AMR
     matched_genes <- annot_df$gene[rownames(annot_df)%in% probes]
     
-    # Nettoyage : séparer les noms multiples s'ils sont séparés par ";"
+    # Clean: split multiple names if separated by ";"
     genes_split <- unlist(strsplit(matched_genes, split = ";"))
     genes_clean <- genes_split[genes_split != ""]
     
@@ -61,7 +61,7 @@ get_major_genes_for_amrs <- function(amr_list, annot_df) {
 }
 
 amr_list = med_tobacco_dnam_AMR$cpg_related_50
-# Résultat : un vecteur avec 1 gène par AMR
+# Result: a vector with 1 gene per AMR
 gene_amr <- get_major_genes_for_amrs(amr_list, annot_df)
 
 
@@ -80,19 +80,19 @@ amr$index = cpg$index[which(cpg$cpg %in% amr$cpg)]
 amr$mark = "AMR"
 amr$gene = gene_amr
 
-# Nettoyer et convertir le format des chromosomes
+# Clean and convert chromosome format
 cpg$chrom <- gsub("chr", "", cpg$chrom)
 cpg$chrom <- as.numeric(cpg$chrom)
-# Trier
+# Sort
 cpg <- cpg[order(cpg$chrom, cpg$pos), ]
 
-# Obtenir chromosomes uniques triés
+# Get unique sorted chromosomes
 chroms <- sort(unique(cpg$chrom))
 
-# Taille maximale par chromosome
+# Maximum size per chromosome
 chr_max <- tapply(cpg$pos, cpg$chrom, max)
 
-# Calcul des offsets (décalages)
+# Calculate offsets
 chr_offset <- numeric(length(chroms))
 names(chr_offset) <- chroms
 
@@ -100,11 +100,9 @@ for (i in 2:length(chroms)) {
   chr_offset[i] <- chr_offset[i - 1] + chr_max[as.character(chroms[i - 1])]
 }
 
-# Création de la position cumulative (index génomique linéaire)
+
 cpg$index <- cpg$pos + chr_offset[as.character(cpg$chrom)]
-# Lier l’index de chaque AMR à son 1er CpG
 amr$index <- cpg$index[match(amr$cpg, cpg$cpg)]
-# Pour afficher les labels des chromosomes sur l’axe
 chr_labels <- tapply(cpg$index, cpg$chrom, function(x) median(range(x)))
 
 pos_chr <- NULL
@@ -166,59 +164,10 @@ amr$CI_97.5 <- med_tobacco_dnam_AMR$step2_res_50$CI_97.5
 amr$signif <- ifelse(amr$acme_pval <= 0.05, "pval <= 0.05", "n.s.")
 amr$amr_id = med_tobacco_dnam_AMR$step2_res_50$feat
 amr$surv_dist = med_tobacco_dnam_AMR$all_step2_res$effects$univariate$best_distribution
-# Ordonner les AMRs selon l'effet estimé
+
 ordered_amr_feat <- amr$amr_id[order(amr$est)]
-saveRDS(ordered_amr_feat,"results/ordered_amr_feat.rds")
 
-
-# Créer le plot
-p_ACME <- ggplot(amr, aes(
-  x = est,
-  y = factor(amr_id, levels = ordered_amr_feat)
-  ,
-  color = surv_dist,
-  #color = est <= 0,
-  shape = signif
-)) +
-  geom_vline(xintercept = 0, linetype = "dashed") +
-  geom_errorbarh(aes(xmin = CI_2.5, xmax = CI_97.5), height = 0.3) +
-  geom_point(size = 2.8) +
-  theme_bw() +
-  labs(
-    title = "A. ACME (Average Causal Mediation Effect)",
-    y = "Mediators",
-    x = "Est. effect [CI 2.5–97.5]"
-  ) +
-  theme(
-    panel.border = element_blank(),
-    panel.spacing = unit(0.01, "lines"),
-    axis.ticks = element_blank()
-  ) +
-  #scale_color_manual(values = c("skyblue", "red"), guide = "none") +
-  scale_shape_manual(values = c("pval <= 0.05" = 16, "n.s." = 17), guide = guide_legend(title = "Significance"))
-
-#save plot
-fig_height = 8
-fig_width = 6
-
-ggsave(
-  "figures/03_TCGA_tobacco_AMR_fdr0_05_acme_plot_V2_K8_corrected.pdf",
-  p_ACME,
-  width = fig_width,
-  height = fig_height,
-  units = "in"
-)
-
-saveRDS(amr, "results/03_TCGA_selected_AMR_complete_info_V2_K8_corrected.rds")
-
-
-###############
 # pseudo log version
-##############
-library(ggplot2)
-library(scales)   # <- nécessaire pour pseudo_log_trans()
-
-# votre code de préparation de amr… puis :
 
 p_ACME_log <- ggplot(amr, aes(
   x     = est,
@@ -234,7 +183,7 @@ p_ACME_log <- ggplot(amr, aes(
   labs(
     title = "A. ACME (Average Causal Mediation Effect)",
     y     = "Mediators",
-    x     = "Effet (pseudo-log10)"
+    x     = "Effect (pseudo-log10)"
   ) +
   scale_color_manual(
     values = c("magenta3", "mediumseagreen" , "orange2"),
@@ -246,9 +195,7 @@ p_ACME_log <- ggplot(amr, aes(
   ) +
   scale_x_continuous(
     trans   = pseudo_log_trans(base = 10),
-    # choisissez ici des bornes qui couvrent bien vos données
     breaks  = c(-100, -10, -1, 0, 1, 10, 100),
-    # labels = fonction identité pour afficher les valeurs “originales”
     labels  = function(x) x
   )
 
@@ -260,44 +207,7 @@ ggsave(
   units  = "in"
 )
 
-###############
-# Acme plot symlog_trans version
-##############
 
-p_ACME_symlog <- ggplot(amr, aes(
-  x     = est,
-  y     = factor(amr_id, levels = ordered_amr_feat),
-  color = est <= 0,
-  shape = signif
-)) +
-  geom_vline(xintercept = 0, linetype = "dashed") +
-  geom_errorbarh(aes(xmin = CI_2.5, xmax = CI_97.5), height = 0.3) +
-  geom_point(size = 2.8) +
-  theme_bw() +
-  labs(
-    title = "A. ACME (Average Causal Mediation Effect)",
-    y     = "Mediators",
-    x     = "Effet (symlog10)"
-  ) +
-  scale_color_manual(values = c("skyblue", "red"), guide = "none") +
-  scale_shape_manual(
-    values = c("pval <= 0.05" = 16, "n.s." = 17),
-    guide  = guide_legend(title = "Significance")
-  ) +
-  scale_x_continuous(
-    trans   = symlog_trans(base = 10, thr = 0.1, scale = 2),
-    # trans   = symlog_trans(base = 10, thr = 1, scale = 1),
-    breaks  = c(-100, -10, -1, 0, 1, 10, 100),
-    labels  = function(x) x
-  )
-
-ggsave(
-  "figures/03_TCGA_tobacco_AMR_acme_symlog.pdf",
-  p_ACME_symlog,
-  width  = 6,
-  height = 8,
-  units  = "in"
-)
 
 ####################################################
 # Indirect effect decomposition
@@ -309,7 +219,7 @@ amr$MY_est = med_tobacco_dnam_AMR$all_step2_res$effects$univariate$my$Estimate
 
 
 box <- data.frame(name = c("Smoking", "Survival"),
-                  X = c(3.6,6.4),  # avant c’était 0 et 10
+                  X = c(3.6,6.4),  # before it was 0 and 10
                   Y = c(0, 0))
 
 med <- subset(amr, acme_pval <= 0.05)
@@ -318,27 +228,24 @@ med <- med[order(-med$est), ]
 med$X <- 5
 med$Y <- seq(10, -10, length.out = nrow(med))
 
-# de tabac à gènes
+# from tobacco to genes
 med$X_XM_seg_s <- 3.6
 med$Y_XM_seg_s <- 0
 med$X_XM_seg_e <- 4.8
 med$Y_XM_seg_e <- med$Y
 
-# de gènes à survie
+# from genes to survival
 med$X_MY_seg_s <- 5.2
 med$Y_MY_seg_s <- med$Y
 med$X_MY_seg_e <- 6.4
 med$Y_MY_seg_e <- 0
 
-#Couleurs et styles
-
+# Colors and styles
 med$fill_acme <- ifelse(med$est <= 0, "Negative", "Positive")
 med$col_xm <- ifelse(med$XM_est <= 0, "Negative", "Positive")
 med$col_my <- ifelse(med$MY_est <= 0, "Negative", "Positive")
 
-
-
-#plot
+# plot
 plot_decompo = ggplot() +
   geom_segment(
     data = med,
@@ -376,18 +283,16 @@ plot_decompo = ggplot() +
   ) +
   scale_color_manual(values = c("red", "skyblue")) +
   scale_fill_manual(values = c("mistyrose", "aliceblue")) +
-  labs(color = "Coeff regression sign", fill = "Indirect Effect (ACME)") +
+  labs(color = "Regression coeff sign", fill = "Indirect Effect (ACME)") +
   coord_cartesian(clip = "off") +
   expand_limits(x = c(3.3, 6.7)) + 
   theme_void() +
   theme(
     legend.position = c(0.05, 0.95),
-    # haut gauche
+    # top left
     legend.justification = c("left", "top"),
     legend.text = element_text(size = 12),
     legend.title = element_text(size = 10)
   )
 
 ggsave("figures/03_ACME_effect_decomposition.pdf",plot_decompo, height = 10, width = 7)
-
-

@@ -16,18 +16,16 @@ param3 = "n"
 # first panel
 ### Load and process data
 
-rdsFileNames = read.csv("~pittionf/Datas/projects/thema_surv/simulations/v2-03/csv/mean_A_mean_B_n_p_10000_n_n_pcp_100_mA_mean_A_mB_mean_B_sA_0.1_sB_0.1_ro_0.5_overlap_0.8_lambda_0.1_aggregated_results.csv", header = FALSE)
+rdsFileNames = read.csv("simulation/v2-03/csv/mean_A_mean_B_n_p_10000_n_n_pcp_100_mA_mean_A_mB_mean_B_sA_0.1_sB_0.1_ro_0.5_overlap_0.8_lambda_0.1_aggregated_results.csv", header = FALSE)
 df = data.frame()
 for (f in seq_along(rdsFileNames[, 1])) {
   f1score = readRDS(rdsFileNames[f,1])
   df = rbind(df, f1score)
 }
 
-
 # keep usefull columns
 df = subset(df, select = c("F1_score_value", "TP", param1, param2, param3, "model"))
 colnames(df) = c("F1Score", "TP", "param1", "param2", "param3", "model")
-
 
 df$param1 <- factor(df$param1)
 df$param2 <- factor(df$param2)
@@ -47,12 +45,9 @@ df_sub$model <- factor(
   )
 )
 
-
-# Création des fonctions de labelling
+# labelling fonctions
 lab_param1 <- function(x) paste0("mean alpha = ", x)  
 lab_param2 <- function(x) paste0("mean beta = ", x)  
-
-
 
 big_theme <- theme(
   plot.title   = element_text(size = 16, face = "bold"),   
@@ -111,7 +106,7 @@ ggsave("figures/step1_results.pdf", p1, width = 10.5, height = 7)
 # Second panel
 ### Load and process data
 
-rdsFileNames = read.csv("~pittionf/Datas/projects/thema_surv/simulations/v2-03/csv/mean_A_mean_B_n_p_10000_n_n_pcp_100_mA_mean_A_mB_mean_B_sA_0.1_sB_0.1_ro_0.5_overlap_0.8_lambda_0.1_aggregated_step2_results.csv", header = FALSE, col.names = c("step2", "mediators"))
+rdsFileNames = read.csv("simulation/v2-03/csv/mean_A_mean_B_n_p_10000_n_n_pcp_100_mA_mean_A_mB_mean_B_sA_0.1_sB_0.1_ro_0.5_overlap_0.8_lambda_0.1_aggregated_step2_results.csv", header = FALSE, col.names = c("step2", "mediators"))
 
 sim = as.numeric(str_match(rdsFileNames$step2, ".*_sim_([012457]+).*")[,2])
 rdsFileNames = cbind(rdsFileNames, sim)
@@ -124,11 +119,8 @@ param3 = "n"
 results = vector(mode = "list")
 for (f in 1:length(rdsFileNames$step2)) {
   res_effect = readRDS(rdsFileNames$step2[f])
-  #res_effects[[f]] = res_effect
   sim_effect = readRDS(rdsFileNames$mediators[f])
-  #sim_effects[[f]] = sim_effect
   results[[f]] = list(res_effect = res_effect ,sim_effect=sim_effect, replicat = sim[f])
-  #results$sim_effects[[f]] = sim_effect
 }
 
 param1Name = param1
@@ -246,10 +238,6 @@ param3_cumul      <- c()
 param1vars = c(0.05, 0.5, 5)
 param2vars = c(0.05, 0.5, 5)
 
-# param1vars = c(0, 0.1, 2)
-# param2vars = c(0, 0.01, 2)
-
-
 for (i in seq_len(nrow(model_methods_df))) {
   model        <- model_methods_df$model[i]
   method       <- model_methods_df$method[i]
@@ -259,8 +247,7 @@ for (i in seq_len(nrow(model_methods_df))) {
     for (param2 in param2vars) {
       for (param3 in param3vars) {
         for (s in seq_along(simus)) {
-          
-          # extraction des résultats filtrés
+  
           data_plot <- select_results(
             results     = results,
             param1Value = param1,
@@ -271,8 +258,7 @@ for (i in seq_len(nrow(model_methods_df))) {
             simu        = simus[s],
             alpha       = 0.05
           )
-          
-          # calcul du score
+         
           score <- 0
           for (j in seq_len(nrow(data_plot))) {
             sim  <- data_plot$simulation[j]
@@ -298,8 +284,6 @@ for (i in seq_len(nrow(model_methods_df))) {
 }
 
 
-
-
 df <- data.frame(
   model_method = model_methods,
   param1       = param1_cumul,
@@ -314,8 +298,6 @@ df$model_method <- factor(
     "aalen/hima","hima/hima"
   )
 )
-
-
 
 ## plot
 
@@ -333,8 +315,8 @@ big_theme <- theme(
 )
 
 
-col_labeller  <- function(x) paste0("Mean alpha = ", x)  # colonnes (param1)
-row_labeller  <- function(x) paste0("Mean beta = ", x)  # lignes   (param2)
+col_labeller  <- function(x) paste0("Mean alpha = ", x)
+row_labeller  <- function(x) paste0("Mean beta = ", x)
 
 
 dodge_w <- 0.8
@@ -363,7 +345,7 @@ p2 <- ggplot(df,
     rows     = vars(param2),
     cols     = vars(param1),
     labeller = labeller(.rows = row_labeller,
-                        .cols = col_labeller)   # ← les bons labellers
+                        .cols = col_labeller)  
   ) +
   scale_fill_viridis_d(option = "plasma", begin = 0.2, end = 0.8, name = "Samples") +
   scale_color_viridis_d(option = "plasma", begin = 0.2, end = 0.8) +
@@ -386,8 +368,6 @@ p2 <- ggplot(df,
   ) +
   ylim(0, 1) +
   big_theme 
-
-#print(p2)
 
 ggsave("figures/step2_res_plot.pdf",p2 , width = 10.5, height = 7)
 
