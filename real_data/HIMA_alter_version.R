@@ -1,5 +1,5 @@
 ###############
-# this alter version allow to collect all pvalues from SIS  step
+# this alter version from HIMA_last_version.R  allow to collect all pvalues from SIS  step
 ###############
 
 

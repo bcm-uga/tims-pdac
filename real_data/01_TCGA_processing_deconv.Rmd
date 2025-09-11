@@ -4,32 +4,29 @@ output: html_document
 date: "2025-01-27"
 ---
 
-```{r echo=FALSE, eval=TRUE}
-knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim", dpi=75)
-layout(1, respect=TRUE)
-```
 
-```{r reference_profiles}
+
+```{r ref_profiles}
 # Retrieve bulk and single-cell references
 # Bulk = cometh lot1 (PaCL2)
-ref_rna_bulk = readRDS("../../datashare/cometh_lot1/transcriptome/T_raw.rds")
+ref_rna_bulk = readRDS("tcga_pdac_mediation/data/cometh_lot1/transcriptome/T_raw.rds")
 
 # Single-cell = Peng / Raghavan
 #devtools::install_github("humengying0907/InstaPrism")
 #devtools::install_github('xuranw/MuSiC')
 library(InstaPrism)
 library(MuSiC)
-ref_rna_scpeng = readRDS("results/00_sc_peng.rds")
-ref_rna_scragh = readRDS("results/00_sc_raghavan.rds")
+ref_rna_scpeng = readRDS("tcga_pdac_mediation/results/00_sc_peng.rds")
+ref_rna_scragh = readRDS("tcga_pdac_mediation/results/00_sc_raghavan.rds")
 ```
 
 ```{r load_data}
 # Load TCGA PDAC data
-data_meth = readRDS("../../datashare/TCGA_PAAD/study_TCGA-PAAD_meth.rds")
-data_trans = readRDS("../../datashare/TCGA_PAAD/study_TCGA-PAAD_trscr.rds")
-meta = read.csv2("../../datashare/TCGA_PAAD/PublishedSampleTable.csv",
+data_meth = readRDS("tcga_pdac_mediation/data/TCGA_PAAD/study_TCGA-PAAD_meth.rds")
+data_trans = readRDS("tcga_pdac_mediation/data/TCGA_PAAD/study_TCGA-PAAD_trscr.rds")
+meta = read.csv2("tcga_pdac_mediation/data/TCGA_PAAD/PublishedSampleTable.csv",
                  header = TRUE)
-raw_exp = read.delim("../../datashare/TCGA_PAAD/clinical.project-tcga-paad.2024-07-30/exposure.tsv")
+raw_exp = read.delim("tcga_pdac_mediation/data/TCGA_PAAD/clinical.project-tcga-paad.2024-07-30/exposure.tsv")
 
 idx_to_keep = meta$Tumor.Sample.ID[which(meta$Tumor.Sample.ID %in% colnames(data_trans$data))]
 dat_meth = data_meth$data[, idx_to_keep]
@@ -73,7 +70,7 @@ rm(idx_na_rows,idx_to_keep,probes_chr)
 gc()
 ```
 
-```{r prep_single_cell}
+```{r prep_single_cell1}
 set.seed(1)
 
 # Make InstaPrism objects
@@ -292,10 +289,6 @@ sex = as.numeric(sex)
 grade = meta$Grade
 grade = as.numeric(sapply(grade, function(x) strsplit(x," ", fixed=T)[[1]][2]))
 
-# chr13
-# loc_chr13 = readRDS("~/projects/thema_surv/loc_chr13.rds")
-# nloc13 = rownames(data_meth$platform[which(data_meth$platform$Chromosome=="chr13"),])
-# M_sample_13 =  M[, which(colnames(M) %in% nloc13)]
 
 # Prop of all immune cells
 immune_cells = c("Neutrophils","Macrophages","B cells", "T cells", "NK","DCs")
@@ -322,6 +315,4 @@ data = list(#M_13 = M_sample_13,
 saveRDS(data, "results/01_tcga_data_expo_deconv.rds")
 ```
 
-```{r session_info}
-sessionInfo()
-```
+

@@ -1,6 +1,14 @@
+# Figures data
+
+## Context
+
+In this document, we indicate where to locate the RDS and CSV files required for generating the figures.  
+Once the data have been retrieved from our Zenodo repository (DOI to be added), please ensure that the folder hierarchy is strictly followed.  
+
+For the real data, the numbering of the `.rds` and `.csv` files corresponds to the `.Rmd` files in which they were produced (these files are available in the `real_data` directory).
 
 
-# File organisation
+## Figures File location
 
 |    Figure    |       Filename                                                                                      |
 |:------------:|----------------------------------------------------------------------------------------------------:|
@@ -14,6 +22,7 @@
 | Figure4      | tcga_pdac_mediation/results/03_tcga_consensus_deconv_immune_cells.csv                               |
 | Figure4      | tcga_pdac_mediation/results/03_tcga_significative_from_top50_tobacco_AMR_fdr0_05_V2_K8_corrected.rds|
 | Figure4      | tcga_pdac_mediation/results/03_tcga_AMR_mean_meth_top50_fdr0_05_V2_K8_corrected.csv                 |
+| Figure4      | tcga_pdac_mediation/results/05_signLFs_by_pairs-A-I.rds                                             |
 |              |                                                                                                     |
 | Figure5      | tcga_pdac_mediation/results/06_TCGA_CAT1_serial_med_V2_K8_corrected_with_selected_LF.rds            |
 | Figure5      | tcga_pdac_mediation/results/06_TCGA_CAT2_serial_med_V2_K8_corrected_with_selected_LF.rds            |
