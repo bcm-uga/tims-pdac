@@ -1,3 +1,7 @@
+######################
+### Supp Figure 8  ###
+######################
+
 library(ggplot2)
 library(dplyr)
 library(tidyr)
@@ -16,8 +20,8 @@ param3 = "n"
 
 
 # load data
-simus = read.csv("simulation/v2-10/csv/all_simu.csv", header = FALSE)
-step1s = read.csv("simulation/v2-10/csv/all_step1s.csv", header = FALSE)
+simus = read.csv("../simulations/simulation_data/v2-10/csv/all_simu.csv", header = FALSE)
+step1s = read.csv("../simulations/simulation_data/v2-10/csv/all_step1s.csv", header = FALSE)
 
 
 # function

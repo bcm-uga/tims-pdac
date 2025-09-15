@@ -16,7 +16,7 @@ source("simulations/surv_aalen.R")
 
 # -- HIMA method (selection + harmonized output)
 source("simulations/HIMA_last_version.R")
-
+library(glmnet)
 # Parameters here are placeholders (not defined),
 # just to keep the workflow readable:
 # n, p, nb_causal_probes, rho, sd_A, mean_A, sd_B, mean_B,
@@ -42,7 +42,7 @@ res <- survival_data_simulation(
 )
 
 # Example metadata (CpG coordinates, truncated to p)
-loc_chr13      <- readRDS("loc_chr13.rds")
+loc_chr13      <- readRDS("simulations/loc_chr13.rds")
 loc_chr13_sort <- sort(loc_chr13)[1:p]
 loc_CpG        <- loc_chr13_sort[1:p]
 

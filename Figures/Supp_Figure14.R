@@ -6,20 +6,20 @@ library(ggplot2)
 ### Load and process data
 
 # Load the TCGA-PAAD data
-tcga_data = readRDS("tcga_pdac_mediation/results/01_tcga_data_expo_deconv.rds") # Load the TCGA-PAAD data
+tcga_data = readRDS("real_data/results/01_tcga_data_expo_deconv.rds") # Load the TCGA-PAAD data
 
 # Load the immune cell-type estimation
-datIMM = read.csv2("tcga_pdac_mediation/results/03_tcga_consensus_deconv_immune_cells.csv", header = TRUE, stringsAsFactors = FALSE, row.names = 1, sep = ",")
+datIMM = read.csv2("real_data/results/03_tcga_consensus_deconv_immune_cells.csv", header = TRUE, stringsAsFactors = FALSE, row.names = 1, sep = ",")
 datIMM[] <- lapply(datIMM, function(x) as.numeric(as.character(x)))
 datIMM$all = rowSums(datIMM)
 colnames(datIMM) = c("Macrophages", "B cells", "T cells", "NK", "DCs", "Tot. Imm." )
 
 # Load the significant AMR results
-tobacco_AMR <- readRDS("tcga_pdac_mediation/results/03_tcga_significative_from_top50_tobacco_AMR_fdr0_05_V2_K8_corrected.rds")
+tobacco_AMR <- readRDS("real_data/results/03_tcga_significative_from_top50_tobacco_AMR_fdr0_05_V2_K8_corrected.rds")
 AMR_names = tobacco_AMR$AMR_info$AMR
 
 # Load the AMR results (methylation value per AMR)
-datAMR = read.csv2("tcga_pdac_mediation/results/03_tcga_AMR_mean_meth_top50_fdr0_05_V2_K8_corrected.csv", header = TRUE, stringsAsFactors = FALSE, row.names = 1, sep = ",") 
+datAMR = read.csv2("real_data/results/03_tcga_AMR_mean_meth_top50_fdr0_05_V2_K8_corrected.csv", header = TRUE, stringsAsFactors = FALSE, row.names = 1, sep = ",") 
 datAMR[] <- lapply(datAMR, function(x) as.numeric(as.character(x)))
 
 # Process the smoking variable from TCGA-PAAD metadata
@@ -29,10 +29,10 @@ labels = smoking[rownames(datAMR)]
 smoking_status = as.numeric(as.factor(labels))
 
 #Latent factor composition and correlation
-res_med = readRDS("tcga_pdac_mediation/results/02_tcga_med_tobacco_dnam_V2_K8_corrected.rds")
+res_med = readRDS("real_data/results/02_tcga_med_tobacco_dnam_V2_K8_corrected.rds")
 LFs = res_med$hdmax2_step1_param$AS_1$U
 colnames(LFs) = paste0("LF_", c("A", "B", "C", "D", "E", "F", "G", "H"))
-pairs_list = readRDS("tcga_pdac_mediation/results/05_signLFs_by_pairs-A-I.rds")
+pairs_list = readRDS("real_data/results/05_signLFs_by_pairs-A-I.rds")
 
 ### Run analysis
 

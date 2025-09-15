@@ -1,3 +1,7 @@
+######################
+### Supp Figure 7  ###
+######################
+
 library(ggplot2)
 library(dplyr)
 library(tidyr)
@@ -10,7 +14,7 @@ param3 = "n"
 ##########
 # 0 B effect plot
 #########
-rdsFileNames = read.csv("simulation/v2-10/csv/mean_A_mean_B_n_p_10000_n_n_pcp_100_mA_mean_A_mB_mean_B_sA_0.1_sB_0_ro_0_overlap_0.8_lambda_0.1_aggregated_results.csv", header = FALSE)
+rdsFileNames = read.csv("../simulations/simulation_data/v2-10/csv/mean_A_mean_B_n_p_10000_n_n_pcp_100_mA_mean_A_mB_mean_B_sA_0.1_sB_0_ro_0_overlap_0.8_lambda_0.1_aggregated_results.csv", header = FALSE)
 
 df = data.frame()
 for (f in seq_along(rdsFileNames[, 1])) {

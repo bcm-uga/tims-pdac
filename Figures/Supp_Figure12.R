@@ -9,7 +9,7 @@ library(gridExtra)
 
 # Get methylation data
 
-tcga_data = readRDS("tcga_pdac_mediation/results/01_tcga_data_expo_deconv.rds")
+tcga_data = readRDS("real_data/results/01_tcga_data_expo_deconv.rds")
 tcga_dna = t(tcga_data$M)
 smoking = ifelse(tcga_data$tobacco==0, 'Non-smoker', 'Smoker')
 names(smoking) = rownames(tcga_data$M)
@@ -22,7 +22,7 @@ tcga_data$probes_info = lapply(tcga_data$probes_info, function(x) {
 
 # Get significant AMR data
 
-tobacco_AMR <- readRDS("tcga_pdac_mediation/results/03_tcga_significative_from_top50_tobacco_AMR_fdr0_05_V2_K8_corrected.rds")
+tobacco_AMR <- readRDS("real_data/results/03_tcga_significative_from_top50_tobacco_AMR_fdr0_05_V2_K8_corrected.rds")
 
 interesting_AMR = c("AMR1", "AMR17", "AMR42", "AMR46")
 tcga_dna_amr = lapply(interesting_AMR, function(x)
@@ -30,12 +30,12 @@ tcga_dna_amr = lapply(interesting_AMR, function(x)
 names(tcga_dna_amr) = interesting_AMR
 
 #Load AMR data
-datAMR = read.csv2("tcga_pdac_mediation/results/03_tcga_AMR_mean_meth_top50_fdr0_05_V2_K8_corrected.csv", header = TRUE, stringsAsFactors = FALSE, row.names = 1, sep = ",")
+datAMR = read.csv2("real_data/results/03_tcga_AMR_mean_meth_top50_fdr0_05_V2_K8_corrected.csv", header = TRUE, stringsAsFactors = FALSE, row.names = 1, sep = ",")
 datAMR[] <- lapply(datAMR, function(x) as.numeric(as.character(x)))
 
 
 # Load platform
-platform = readRDS("tcga_pdac_mediation/data/TCGA_PAAD/platform_meth_icgc.rds")
+platform = readRDS("real_data/tcga_pdac_mediation/data/platform_meth_icgc.rds")
 cpg_annotation = platform
 
 cpg = lapply(tcga_dna_amr, rownames)
@@ -53,7 +53,7 @@ feat_type = mapply(function(x, y) cpg_annotation[cpg_annotation$Start>=min(x) & 
                    pos, chr, SIMPLIFY = F)
 
 #load gene expression
-tcga_exprs0 = readRDS("tcga_pdac_mediation/data/TCGA_PAAD/study_TCGA-PAAD_trscr.rds")
+tcga_exprs0 = readRDS("real_data/tcga_pdac_mediation/data/TCGA_PAAD/study_TCGA-PAAD_trscr.rds")
 
 genes <- c("HOXC4", "TSC2", "FERMT3", "PIK3R1") # Known genes of interest
 expr = t(tcga_exprs0$data[genes, rownames(tcga_data$M)])

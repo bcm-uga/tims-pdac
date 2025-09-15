@@ -16,7 +16,7 @@ param3 = "n"
 # first panel
 ### Load and process data
 
-rdsFileNames = read.csv("simulation/v2-03/csv/mean_A_mean_B_n_p_10000_n_n_pcp_100_mA_mean_A_mB_mean_B_sA_0.1_sB_0.1_ro_0.5_overlap_0.8_lambda_0.1_aggregated_results.csv", header = FALSE)
+rdsFileNames = read.csv("../simulations/simulation_data/v2-03/csv/mean_A_mean_B_n_p_10000_n_n_pcp_100_mA_mean_A_mB_mean_B_sA_0.1_sB_0.1_ro_0.5_overlap_0.8_lambda_0.1_aggregated_results.csv", header = FALSE)
 df = data.frame()
 for (f in seq_along(rdsFileNames[, 1])) {
   f1score = readRDS(rdsFileNames[f,1])
@@ -106,7 +106,7 @@ ggsave("figures/step1_results.pdf", p1, width = 10.5, height = 7)
 # Second panel
 ### Load and process data
 
-rdsFileNames = read.csv("simulation/v2-03/csv/mean_A_mean_B_n_p_10000_n_n_pcp_100_mA_mean_A_mB_mean_B_sA_0.1_sB_0.1_ro_0.5_overlap_0.8_lambda_0.1_aggregated_step2_results.csv", header = FALSE, col.names = c("step2", "mediators"))
+rdsFileNames = read.csv("../simulations/simulation_data/v2-03/csv/mean_A_mean_B_n_p_10000_n_n_pcp_100_mA_mean_A_mB_mean_B_sA_0.1_sB_0.1_ro_0.5_overlap_0.8_lambda_0.1_aggregated_step2_results.csv", header = FALSE, col.names = c("step2", "mediators"))
 
 sim = as.numeric(str_match(rdsFileNames$step2, ".*_sim_([012457]+).*")[,2])
 rdsFileNames = cbind(rdsFileNames, sim)
