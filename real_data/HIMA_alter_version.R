@@ -1,8 +1,10 @@
-###############
+##########################################################################################
+# This version corresponds to the latest version on the GitHub repository of the HIMA package, 
+# but it was not released at the time and therefore could not be installed. 
+# The source code file was imported directly instead.
+#
 # this alter version from HIMA_last_version.R  allow to collect all pvalues from SIS  step
-###############
-
-
+##########################################################################################
 
 
 # This is the function for our proposed method for high-dimensional Cox mediation analysis

@@ -1,4 +1,13 @@
 # Second panel
+
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(gridExtra)
+library(viridis)
+library(stringr)
+
 ### Load and process data
 
 rdsFileNames = read.csv("simulation/v2-03/csv/mean_A_mean_B_n_p_10000_n_n_pcp_100_mA_mean_A_mB_mean_B_sA_0.1_sB_0.1_ro_0.5_overlap_0.8_lambda_0.1_aggregated_step2_results.csv", header = FALSE, col.names = c("step2", "mediators"))

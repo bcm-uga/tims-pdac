@@ -6,14 +6,14 @@ date: "2025-01-27"
 
 # TCGA data
 
-```{r med load}
+```{r med_load}
 library(survival)
 library(ggplot2)
 library(see)
 library(dplyr)
 library(UpSetR)
 
-tcga_data = readRDS("~/projects/tims-pdac/real_data/tcga_pdac_mediation/results/01_tcga_data_expo_deconv.rds")
+tcga_data = readRDS("results/01_tcga_data_expo_deconv.rds")
 
 # define variables
 time = tcga_data$time
@@ -39,7 +39,7 @@ X_immune = X_deconv[rownames(X_deconv) %in% immune_cells,]
 
 
 ```{r med_run}
-#mediation tobacco_dnam_survival with imm cells LF estimation integration K = 8
+#mediation tobacco_dnam_survival with immune cells, LF estimation integration K = 8
 source("surv_parametric_alternative.R")
 
 exposure = tobacco_bin
@@ -61,6 +61,6 @@ hdmax2_step2_param = estimate_effect_surv_param(hdmax2_step1_param, m = m_param)
 hdmax2_param_tobacco_dnam = list(hdmax2_step1_param=hdmax2_step1_param,
                                  m_param=m_param,
                                  hdmax2_step2_param=hdmax2_step2_param)
-saveRDS(hdmax2_param_tobacco_dnam, "~/projects/tims-pdac/real_data/results/02_tcga_med_tobacco_dnam_V2_K8_corrected.rds")
+saveRDS(hdmax2_param_tobacco_dnam, "results/02_tcga_med_tobacco_dnam_V2_K8_corrected.rds")
 
 ```

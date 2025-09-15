@@ -1,12 +1,16 @@
  ---
-title: "Processing+Deconv_PDAC_TCGA"
+title: "Processing + Deconv_PDAC_TCGA"
 output: html_document
 date: "2025-01-27"
 ---
 
 
+```{r fix_var, include=FALSE}
+if (exists("var", inherits = TRUE) && !is.function(var)) rm("var", inherits = TRUE)
+var <- stats::var
+```
 
-```{r ref_profiles}
+```{r reference_profiles}
 # Retrieve bulk and single-cell references
 # Bulk = cometh lot1 (PaCL2)
 ref_rna_bulk = readRDS("tcga_pdac_mediation/data/cometh_lot1/transcriptome/T_raw.rds")
@@ -16,8 +20,8 @@ ref_rna_bulk = readRDS("tcga_pdac_mediation/data/cometh_lot1/transcriptome/T_raw
 #devtools::install_github('xuranw/MuSiC')
 library(InstaPrism)
 library(MuSiC)
-ref_rna_scpeng = readRDS("tcga_pdac_mediation/results/00_sc_peng.rds")
-ref_rna_scragh = readRDS("tcga_pdac_mediation/results/00_sc_raghavan.rds")
+ref_rna_scpeng = readRDS("tcga_pdac_mediation/results/test/00_sc_peng.rds")
+ref_rna_scragh = readRDS("tcga_pdac_mediation/results/test/00_sc_raghavan.rds")
 ```
 
 ```{r load_data}
@@ -55,7 +59,6 @@ probes_chr_GeneSymbol = data_meth$platform[probes_chr,]$Gene_Symbol
 probes_chr_End = data_meth$platform[probes_chr,]$End
 dat_meth = dat_meth[probes_chr,]
 
-
 # keep only samples w/ follow up (n=143)
 dat_trans = dat_trans[, !is.na(meta$Follow.up.days) & !is.na(meta$Censored.1.yes.0.no) & meta$Follow.up.days!=0]
 dim(dat_trans)
@@ -70,7 +73,7 @@ rm(idx_na_rows,idx_to_keep,probes_chr)
 gc()
 ```
 
-```{r prep_single_cell1}
+```{r prep_single_cell}
 set.seed(1)
 
 # Make InstaPrism objects
@@ -289,7 +292,6 @@ sex = as.numeric(sex)
 grade = meta$Grade
 grade = as.numeric(sapply(grade, function(x) strsplit(x," ", fixed=T)[[1]][2]))
 
-
 # Prop of all immune cells
 immune_cells = c("Neutrophils","Macrophages","B cells", "T cells", "NK","DCs")
 prop_immune = colSums(X_expo$Consensus[rownames(X_expo$Consensus) %in% immune_cells,])
@@ -315,4 +317,6 @@ data = list(#M_13 = M_sample_13,
 saveRDS(data, "results/01_tcga_data_expo_deconv.rds")
 ```
 
-
+```{r session_info}
+sessionInfo()
+```

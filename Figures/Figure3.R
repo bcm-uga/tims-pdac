@@ -1,3 +1,8 @@
+################
+### Figure 3 ###
+################
+
+
 library(tidyverse)
 library(ggrepel)
 library(cowplot)
@@ -7,11 +12,11 @@ library(scales)
 library(LightLogR) 
 
 # load data
-med_tobacco_dnam_AMR = readRDS("tcga_pdac_mediation/results/03_tcga_top50_tobacco_AMR_fdr0_05_V2_K8_corrected.rds")
-med_tobacco_dnam_CpG = readRDS("tcga_pdac_mediation/results/02_tcga_med_tobacco_dnam_V2_K8_corrected.rds")
-pf = readRDS("results/03_platform_info_tcga_meth.rds")
+med_tobacco_dnam_AMR = readRDS("real_data/results/03_tcga_top50_tobacco_AMR_fdr0_05_V2_K8_corrected.rds")
+med_tobacco_dnam_CpG = readRDS("real_data/results/02_tcga_med_tobacco_dnam_V2_K8_corrected.rds")
+pf = readRDS("real_data/results/03_platform_info_tcga_meth.rds")
 
-tcga_data = readRDS("tcga_pdac_mediation/results/01_tcga_data_expo_deconv.rds")
+tcga_data = readRDS("real_data/results/01_tcga_data_expo_deconv.rds")
 
 ############################################################################
 ## manhattan plot

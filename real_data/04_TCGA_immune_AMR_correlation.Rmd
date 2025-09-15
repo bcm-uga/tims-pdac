@@ -4,11 +4,11 @@ output: html_document
 date: "2025-03-22"
 ---
 
-```{r correlation AMR immune V2 K8}
+```{r corr_AMR immune V2 K8}
 library(reshape2)
 
-deconv = readRDS("~/projects/tims-pdac/real_data/tcga_pdac_mediation/results/01_tcga_data_expo_deconv.rds")
-mean_meth_AMR = readRDS("~/projects/tims-pdac/real_data/results/03_tcga_top50_tobacco_AMR_fdr0_05_V2_K8_corrected.rds")
+deconv = readRDS("tcga_pdac_mediation/results/01_tcga_data_expo_deconv.rds")
+mean_meth_AMR = readRDS("results/03_tcga_top50_tobacco_AMR_fdr0_05_V2_K8_corrected.rds")
 mean_meth_AMR = mean_meth_AMR$mean_meth_mat
 X_deconv = deconv$X_deconv$Consensus
 immune_cells = c("Macrophages","B cells", "T cells", "NK","DCs")
@@ -58,18 +58,20 @@ pval_df <- melt(pval_matrix, varnames = c("DNAm", "Immune"), value.name = "P_val
 corr_df <- melt(corr_matrix, varnames = c("DNAm", "Immune"), value.name = "corr")
 pval_df$variable = rep("P_value", dim(pval_df)[1] )
 
-plot_df = data.frame(AMR = cor_df$DNAm,
-                     correlation = cor_df$Correlation,
-                     pvalue = pval_df$P_value,
-                     cell_type = pval_df$Immune,
-                     corr = corr_df$corr)
+# plot_df = data.frame(AMR = cor_df$DNAm,
+#                      correlation = cor_df$Correlation,
+#                      pvalue = pval_df$P_value,
+#                      cell_type = pval_df$Immune,
+#                      corr = corr_df$corr)
 df_to_save = data.frame(AMR = cor_df$DNAm,
                         pvalue = pval_df$P_value,
                         cell_type = pval_df$Immune,
                         corr = corr_df$corr)
-saveRDS(df_to_save, "~/projects/tims-pdac/real_data/results/04_tcga_AMR_imm_corr_fdr0_05_V2_K8_corrected.rds")
+# correlation value, pvalue
+saveRDS(df_to_save, "results/04_tcga_AMR_imm_corr_fdr0_05_V2_K8_corrected.rds")
 
+# AMR mean methylation matrix + immune cell types proportion
 res = list(immune_cons = immune_cons, mean_meth_AMR = mean_meth_AMR)
-saveRDS(res, "~/projects/tims-pdac/real_data/results/04_tcga_imm_AMR_matrix_fdr0_05_V2_K8_corrected.rds")
+saveRDS(res, "results/04_tcga_imm_AMR_matrix_fdr0_05_V2_K8_corrected.rds")
 ```
 

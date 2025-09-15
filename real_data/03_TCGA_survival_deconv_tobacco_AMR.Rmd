@@ -1,5 +1,5 @@
 ---
-title: "mediation with AMR Data"
+title: "AMR search + Mediation with AMR Data"
 output: html_document
 date: "2025-01-27"
 ---
@@ -7,14 +7,7 @@ date: "2025-01-27"
 
 Identify Aggregated Methylated Regions (AMR) with `AMR_search` function which uses the P-values from the max-squared test computed with the `run_AS` function and using a adapted comb-p method (comb-p is a tool that manipulates BED files of possibly irregularly spaced P-values and calculates auto-correlation, combines adjacent P-values, performs false discovery adjustment, finds regions of enrichment and assigns significance to those regions). AMR identification could be useful in EWAS when single CpG mediation is unsuccessful, or could be a complementary analysis.
 
-
-seed = FDR significance threshold for initial selection of AMR region
-
-
-
-
-
-```{r init}
+```{r amr_init}
 library(survival)
 library(ggplot2)
 library(epimedtools)
@@ -25,14 +18,12 @@ source("surv_aalen_alternative.R")
 set.seed(123)
 ```
 
-
-
 # TCGA data V2 K8 corrected
 
-```{r load4}
+```{r amr_load4}
 
-med_tobacco_dnam = readRDS("~/projects/tims-pdac/real_data/results/02_tcga_med_tobacco_dnam_V2_K8_corrected.rds")
-data_tcga = readRDS("~/projects/tims-pdac/real_data/tcga_pdac_mediation/results/01_tcga_data_expo_deconv.rds")
+med_tobacco_dnam = readRDS("results/02_tcga_med_tobacco_dnam_V2_K8_corrected.rds")
+data_tcga = readRDS("tcga_pdac_mediation/results/01_tcga_data_expo_deconv.rds")
 
 ```
 
@@ -40,7 +31,7 @@ data_tcga = readRDS("~/projects/tims-pdac/real_data/tcga_pdac_mediation/results/
 ## Tobacco -> DNAm
 # 2 cpg min
 ### seed = 0.05
-```{r tobacco DNAm AMR V2 K8, message=FALSE, eval=TRUE}
+```{r amr_tobacco DNAm AMR V2 K8, message=FALSE, eval=TRUE}
 set.seed(123)
 ######################
 #AMR research
@@ -50,7 +41,7 @@ pf_meth = data.frame("Chromosome"=data_tcga$probes_info$CHR,
                      "End"=data_tcga$probes_info$End,
                      "Gene_Symbol"=data_tcga$probes_info$Gene_Symbol)
 rownames(pf_meth) = colnames(data_tcga$M)
-
+saveRDS(pf_meth, "results/03_platform_info_tcga_meth.rds")
 # AMR research
 res.amr_search = AMR_search(chr = pf_meth$Chromosome,
                                     start = pf_meth$Start,
@@ -67,8 +58,8 @@ res.amr_build = AMR_build(res.amr_search,
 # total AMR
 m = as.matrix(res.amr_build$AMR_mean)
 
-saveRDS(m, "~/projects/tims-pdac/real_data/results/03_tcga_mean_meth_AMR_fdr0_05_V2_K8_corrected.rds")
-saveRDS(res.amr_build, "~/projects/tims-pdac/real_data/results/03_tcga_tobacco_AMR_fdr0_05_V2_K8_corrected.rds")
+saveRDS(m, "results/03_tcga_mean_meth_AMR_fdr0_05_V2_K8_corrected.rds")
+saveRDS(res.amr_build, "results/03_tcga_tobacco_AMR_fdr0_05_V2_K8_corrected.rds")
 
 
 # top 50 AMR (most significative according to combp pval)
@@ -90,7 +81,7 @@ hdmax2_step2 = estimate_effect_surv_param(object = med_tobacco_dnam$hdmax2_step1
 acme = hdmax2_step2$effects$univariate$ACME
 significative_AMR_acme = acme[which(acme$pval<=0.05),]
 mean_meth_significative = m[, significative_AMR_acme$feat]
-saveRDS(mean_meth_significative, "~/projects/tims-pdac/real_data/results/03_tcga_significative_from_top50_mean_meth_AMR_fdr0_05_V2_K8_corrected.rds")
+saveRDS(mean_meth_significative, "results/03_tcga_significative_from_top50_mean_meth_AMR_fdr0_05_V2_K8_corrected.rds")
 
 AMR_info = res.amr_build$res
 CpG_related_info = res.amr_build$CpG_for_each_AMR
@@ -102,7 +93,7 @@ res_50 = list(all_step2_res = hdmax2_step2,
               AMR_info_50  = AMR_info[AMR_info$AMR %in% top_50_AMR$AMR,],
               cpg_related_50 = cpg_related_50,
               mean_meth_mat = mean_meth_50)
-saveRDS(res_50, "~/projects/tims-pdac/real_data/results/03_tcga_top50_tobacco_AMR_fdr0_05_V2_K8_corrected.rds")
+saveRDS(res_50, "results/03_tcga_top50_tobacco_AMR_fdr0_05_V2_K8_corrected.rds")
 
 res = list(
   step2_res = significative_AMR_acme,
@@ -110,17 +101,17 @@ res = list(
   CpG_related_info = CpG_related_info_significative
 )
 
-saveRDS(res, "~/projects/tims-pdac/real_data/results/03_tcga_significative_from_top50_tobacco_AMR_fdr0_05_V2_K8_corrected.rds")
+saveRDS(res, "results/03_tcga_significative_from_top50_tobacco_AMR_fdr0_05_V2_K8_corrected.rds")
 
 # for causal direction analyses (Nelle)
-write.csv(mean_meth_50, "~/projects/tims-pdac/real_data/results/03_tcga_AMR_mean_meth_top50_fdr0_05_V2_K8_corrected.csv")
+write.csv(mean_meth_50, "results/03_tcga_AMR_mean_meth_top50_fdr0_05_V2_K8_corrected.csv")
 
-write.csv(mean_meth_significative, "~/projects/tims-pdac/real_data/results/03_tcga_AMR_mean_meth_significative_fdr0_05_V2_K8_corrected.csv")
+write.csv(mean_meth_significative, "results/03_tcga_AMR_mean_meth_significative_fdr0_05_V2_K8_corrected.csv")
 
 X_deconv = data_tcga$X_deconv$Consensus
 immune_cells = c("Macrophages","B cells", "T cells", "NK","DCs")
 X_immune = X_deconv[rownames(X_deconv) %in% immune_cells,]
 X_immune = t(X_immune)
 
-write.csv(X_immune, "~/projects/tims-pdac/real_data/results/03_tcga_consensus_deconv_immune_cells.csv")
+write.csv(X_immune, "results/03_tcga_consensus_deconv_immune_cells.csv")
 ```

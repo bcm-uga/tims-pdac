@@ -4,21 +4,19 @@ output: html_document
 date: "2025-01-27"
 ---
 
-```{r echo=FALSE, eval=TRUE}
-knitr::opts_chunk$set(collapse=TRUE, comment = "#>", fig.width=9, fig.height=6, eval=TRUE, echo=TRUE, results="verbatim", dpi=75)
-layout(1, respect=TRUE)
-```
 
-```{r reference_profiles}
+```{r proc_reference_profiles}
 if (file.exists("results/00_sc_peng.rds") & file.exists("results/00_sc_raghavan.rds")) {
   stop("no need to run this script")
 }
 # Single-cell = Peng / Raghavan
-ref_rna_scpeng = readRDS("../../datashare/genref_hadaca3/00_peng_k_2019.rds")
-ref_rna_scragh = readRDS("../../datashare/genref_hadaca3/00_raghavan_s_2021.rds")
+ref_rna_scpeng = readRDS("tcga_pdac_mediation/data/genref_hadaca3/00_peng_k_2019.rds")
+ref_rna_scragh = readRDS("tcga_pdac_mediation/data/genref_hadaca3/00_raghavan_s_2021.rds")
 ```
 
-```{r prep_single_cell}
+
+
+```{r proc_prep_single_cell}
 set.seed(1)
 
 source("deconv_scripts/deconv_puriST.R")
@@ -91,11 +89,11 @@ rm(peng_pred,ragh_pred,peng,ragh,cell_sample,
    classifs,apply_classifier,ind_fun)
 ```
 
-```{r save}
+```{r proc_save}
 saveRDS(ref_rna_scpeng, "results/00_sc_peng.rds")
 saveRDS(ref_rna_scragh, "results/00_sc_raghavan.rds")
 ```
 
-```{r session_info}
+```{r proc_session_info}
 sessionInfo()
 ```
