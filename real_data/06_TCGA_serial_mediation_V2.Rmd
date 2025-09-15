@@ -11,7 +11,7 @@ library(dplyr)
 set.seed(123)
 ```
 
-
+## Mediation analysis for each AMR - Immune cells type  pairs selected from causal discovery
 
 
 ```{r serial mediation with LF A, B and F in covars alternative version}
@@ -55,13 +55,12 @@ DAGvalidated_CAT2 <- gsub("_", " ", DAGvalidated_CAT2)
 
 select_LF = readRDS("results/05_signLFs_by_pairs-A-I.rds")
 
-#saveRDS( LF, "results/06_tcga_med_tobacco_dnam_V2_K8_corrected_LF_matrix.rds")
-#covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lf1 = res_med$hdmax2_step1_param$AS_1$U[,1], lf2 = res_med$hdmax2_step1_param$AS_1$U[,2],lf6 = res_med$hdmax2_step1_param$AS_1$U[,6])
-
 covars = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3])
 
 # create total immune class 
 immune_cons$all = rowSums(immune_cons)
+
+## DAG 1
 
 # AMR1 Bcells
 
@@ -71,7 +70,7 @@ mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
 immune_cons_temp = immune_cons$`B cells`
 immune_cons_temp = as.matrix(immune_cons_temp)
 
-#covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfA )
+
 covars_LF = covars
 
 res_mediation_AMR1_BC <- run_serial_mediation_grid2_alter(
@@ -98,7 +97,6 @@ immune_cons_temp = immune_cons$all
 immune_cons_temp = as.matrix(immune_cons_temp)
 
 covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfA )
-#covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -122,7 +120,6 @@ mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
 immune_cons_temp = immune_cons$`B cells`
 immune_cons_temp = as.matrix(immune_cons_temp)
 
-#covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfA )
 covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
@@ -147,7 +144,6 @@ immune_cons_temp = immune_cons$all
 immune_cons_temp = as.matrix(immune_cons_temp)
 
 covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfA, lfB )
-#covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -172,7 +168,6 @@ immune_cons_temp = immune_cons$DCs
 immune_cons_temp = as.matrix(immune_cons_temp)
 
 covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfA )
-#covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -197,7 +192,6 @@ immune_cons_temp = immune_cons$all
 immune_cons_temp = as.matrix(immune_cons_temp)
 
 covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfA )
-#covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -220,7 +214,6 @@ mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
 immune_cons_temp = immune_cons$`B cells`
 immune_cons_temp = as.matrix(immune_cons_temp)
 
-#covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfF )
 covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
@@ -245,7 +238,6 @@ mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
 immune_cons_temp = immune_cons$`B cells`
 immune_cons_temp = as.matrix(immune_cons_temp)
 
-#covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfF )
 covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
@@ -271,7 +263,6 @@ mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
 immune_cons_temp = immune_cons$DCs
 immune_cons_temp = as.matrix(immune_cons_temp)
 
-#covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfF )
 covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
@@ -297,7 +288,6 @@ mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
 immune_cons_temp = immune_cons$all
 immune_cons_temp = as.matrix(immune_cons_temp)
 
-#covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfF )
 covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
@@ -325,7 +315,6 @@ immune_cons_temp = immune_cons$`B cells`
 immune_cons_temp = as.matrix(immune_cons_temp)
 
 covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfB )
-#covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -348,7 +337,6 @@ mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
 immune_cons_temp = immune_cons$`B cells`
 immune_cons_temp = as.matrix(immune_cons_temp)
 
-#covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfF )
 covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
@@ -374,7 +362,6 @@ immune_cons_temp = immune_cons$DCs
 immune_cons_temp = as.matrix(immune_cons_temp)
 
 covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfA )
-#covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -400,7 +387,6 @@ immune_cons_temp = immune_cons$all
 immune_cons_temp = as.matrix(immune_cons_temp)
 
 covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfA )
-#covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -426,7 +412,6 @@ immune_cons_temp = immune_cons$DCs
 immune_cons_temp = as.matrix(immune_cons_temp)
 
 covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfA )
-#covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -452,7 +437,6 @@ immune_cons_temp = immune_cons$all
 immune_cons_temp = as.matrix(immune_cons_temp)
 
 covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfA )
-#covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -478,7 +462,6 @@ immune_cons_temp = immune_cons$`B cells`
 immune_cons_temp = as.matrix(immune_cons_temp)
 
 covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfB )
-#covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -503,7 +486,6 @@ immune_cons_temp = immune_cons$all
 immune_cons_temp = as.matrix(immune_cons_temp)
 
 covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfB )
-#covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -529,7 +511,6 @@ immune_cons_temp = immune_cons$`B cells`
 immune_cons_temp = as.matrix(immune_cons_temp)
 
 covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfF )
-#covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -554,7 +535,6 @@ immune_cons_temp = immune_cons$DCs
 immune_cons_temp = as.matrix(immune_cons_temp)
 
 covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfF )
-#covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -580,7 +560,6 @@ immune_cons_temp = immune_cons$all
 immune_cons_temp = as.matrix(immune_cons_temp)
 
 covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfF )
-#covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -598,7 +577,6 @@ res = rbind(res, res_mediation_temp)
 
 
 
-
 # AMR33 Bcells
 
 
@@ -609,7 +587,6 @@ immune_cons_temp = immune_cons$`B cells`
 immune_cons_temp = as.matrix(immune_cons_temp)
 
 covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfB )
-#covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -636,7 +613,6 @@ immune_cons_temp = immune_cons$`B cells`
 immune_cons_temp = as.matrix(immune_cons_temp)
 
 covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfB )
-#covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -663,7 +639,6 @@ immune_cons_temp = immune_cons$`B cells`
 immune_cons_temp = as.matrix(immune_cons_temp)
 
 covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfB )
-#covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -680,8 +655,6 @@ res_mediation_temp$feat = c(rep("AMR39_B cells",5))
 res = rbind(res, res_mediation_temp)
 
 
-
-
 # AMR46 Bcells
 
 mean_meth_AMR_temp = mean_meth_AMR$AMR46
@@ -691,7 +664,6 @@ immune_cons_temp = immune_cons$`B cells`
 immune_cons_temp = as.matrix(immune_cons_temp)
 
 covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfB )
-#covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -708,9 +680,6 @@ res_mediation_temp$feat = c(rep("AMR46_B cells",5))
 res = rbind(res, res_mediation_temp)
 
 
-
-
-
 # AMR46 DCs
 
 mean_meth_AMR_temp = mean_meth_AMR$AMR46
@@ -720,7 +689,6 @@ immune_cons_temp = immune_cons$DCs
 immune_cons_temp = as.matrix(immune_cons_temp)
 
 covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfA , lfB)
-#covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -748,6 +716,7 @@ saveRDS(res, "results/06_TCGA_CAT1_serial_med_V2_K8_corrected_with_selected_LF.r
 
 
 ```{r}
+## DAG 2
 
 # AMR8 B cells
 
@@ -757,7 +726,6 @@ mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
 immune_cons_temp = immune_cons$`B cells`
 immune_cons_temp = as.matrix(immune_cons_temp)
 
-#covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfA )
 covars_LF = covars
 
 res_mediation_init <- run_serial_mediation_grid2_alter(
@@ -774,7 +742,6 @@ res_mediation_init$feat = c(rep("AMR8_B cells",5))
 res = as.data.frame(res_mediation_init)
 
 
-
 # AMR14 B cells
 
 mean_meth_AMR_temp = mean_meth_AMR$AMR8
@@ -784,7 +751,6 @@ immune_cons_temp = immune_cons$`B cells`
 immune_cons_temp = as.matrix(immune_cons_temp)
 
 covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfF)
-#covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -809,7 +775,6 @@ immune_cons_temp = immune_cons$`B cells`
 immune_cons_temp = as.matrix(immune_cons_temp)
 
 covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfF)
-#covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -834,7 +799,6 @@ mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
 immune_cons_temp = immune_cons$`B cells`
 immune_cons_temp = as.matrix(immune_cons_temp)
 
-#covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfF)
 covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
@@ -859,7 +823,6 @@ mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
 immune_cons_temp = immune_cons$`B cells`
 immune_cons_temp = as.matrix(immune_cons_temp)
 
-#covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfF)
 covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
@@ -885,7 +848,6 @@ immune_cons_temp = immune_cons$all
 immune_cons_temp = as.matrix(immune_cons_temp)
 
 covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfA)
-#covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -908,7 +870,6 @@ mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
 immune_cons_temp = immune_cons$all
 immune_cons_temp = as.matrix(immune_cons_temp)
 
-#covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfF)
 covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(

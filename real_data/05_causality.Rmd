@@ -247,14 +247,14 @@ Graphical representation of the results of the causality analysis using hand-mad
  df$dif = df$zscore_fw - df$zscore_bw #check which models has the highest mutual info
  df$color_group <- ifelse(df$dif >= 0, "imm > AMR", "AMR > immu")
  
-# ggplot(df, aes(x = zscore_fw, y = zscore_bw, color = color_group)) +
-#   geom_point(alpha = 0.6) +  # Nuage de points coloré
-#  # geom_smooth(method = "lm", col = "red", se = FALSE) +  # Régression linéaire
-#   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "black") +  # Ligne d'identité y = x
-#   scale_color_manual(values = c("imm > AMR" = "darkgreen", "AMR > immu" = "red")) +  # Couleurs personnalisées
-#    geom_text(aes(label = rownames(df)), hjust = 0.5, vjust = -0.8, size = 3, color = "black") +  # Ajout des labels
-#   ggtitle("Comparison of Mutual Information zscores") +
-#   theme_minimal()
+ggplot(df, aes(x = zscore_fw, y = zscore_bw, color = color_group)) +
+  geom_point(alpha = 0.6) +  # Nuage de points coloré
+ # geom_smooth(method = "lm", col = "red", se = FALSE) +  # Régression linéaire
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "black") +  # Ligne d'identité y = x
+  scale_color_manual(values = c("imm > AMR" = "darkgreen", "AMR > immu" = "red")) +  # Couleurs personnalisées
+   geom_text(aes(label = rownames(df)), hjust = 0.5, vjust = -0.8, size = 3, color = "black") +  # Ajout des labels
+  ggtitle("Comparison of Mutual Information zscores") +
+  theme_minimal()
 ```
 
 ## Conclusion
@@ -299,97 +299,97 @@ saveRDS(rownames(data), file = "results/05_posAMR_CDS.rds")
 n = nrow(data)
 #par(mfrow = c(ceiling(n / 2), 5))  # Affiche 2 graphes par ligne
 names = rownames(data)
-#dev.off()
-# for (i in 1:nrow(data)) {
-#   dist_vals <- data[i, 3:ncol(data)]
-#   hist(dist_vals,
-#        main = paste(names[[i]]),
-#        xlab = "Values",
-#        col = "lightgreen",
-#        border = "white",
-#        breaks = 20)
-# 
-#   abline(v = data[i, 1], col = "red", lwd = 2, lty = 1)  # point
-#   abline(v = data[i, 2], col = "blue", lwd = 2, lty = 2)  # limite
-#   legend("topright", legend = c("Point", "Limite"),
-#          col = c("red", "blue"), lty = c(1, 2), lwd = 2, bty = "n")
-# }
+dev.off()
+for (i in 1:nrow(data)) {
+  dist_vals <- data[i, 3:ncol(data)]
+  hist(dist_vals,
+       main = paste(names[[i]]),
+       xlab = "Values",
+       col = "lightgreen",
+       border = "white",
+       breaks = 20)
+
+  abline(v = data[i, 1], col = "red", lwd = 2, lty = 1)  # point
+  abline(v = data[i, 2], col = "blue", lwd = 2, lty = 2)  # limite
+  legend("topright", legend = c("Point", "Limite"),
+         col = c("red", "blue"), lty = c(1, 2), lwd = 2, bty = "n")
+}
 
 #pdf("figures/05_empirical_pvalues.pdf", width = 12, height = 12)
 
-# par(mfrow = c(ceiling(n / 2), 3), mar = c(4, 4, 2, 1))  # Affiche 2 graphes par ligne
-# names = rownames(data)
-# for (i in 1:nrow(data)) {
-#   dist_vals <- data[i, 3:ncol(data)]
-#   hist(dist_vals,
-#        main = paste(names[[i]]),
-#        xlab = "Values",
-#        col = "lightgreen",
-#        border = "white",
-#        breaks = 20)
-# 
-#   abline(v = data[i, 1], col = "red", lwd = 2, lty = 1)  # point
-#   abline(v = data[i, 2], col = "blue", lwd = 2, lty = 2)  # limite
-#   legend("topright", legend = c("AMR", "threshold"),
-#          col = c("red", "blue"), lty = c(1, 2), lwd = 2, bty = "n")
-# }
-# 
-# dev.off()
+par(mfrow = c(ceiling(n / 2), 3), mar = c(4, 4, 2, 1))  # Affiche 2 graphes par ligne
+names = rownames(data)
+for (i in 1:nrow(data)) {
+  dist_vals <- data[i, 3:ncol(data)]
+  hist(dist_vals,
+       main = paste(names[[i]]),
+       xlab = "Values",
+       col = "lightgreen",
+       border = "white",
+       breaks = 20)
+
+  abline(v = data[i, 1], col = "red", lwd = 2, lty = 1)  # point
+  abline(v = data[i, 2], col = "blue", lwd = 2, lty = 2)  # limite
+  legend("topright", legend = c("AMR", "threshold"),
+         col = c("red", "blue"), lty = c(1, 2), lwd = 2, bty = "n")
+}
+
+dev.off()
 
 
 ## plot permutation for positive candidates in serial mediation (from 06 TCGA serial mediation)
 
-#idx = readRDS("results/06_TCGA_serial_med_top50_V2_K8_corrected_selected_combinaison.rds")
-# positive_amr = amr_to_imm[which(rownames(amr_to_imm) %in% idx_woLF),]
-# data = as.matrix(positive_amr)
-# 
-# # Visualisation
-# n = nrow(data)
-# par(mfrow = c(ceiling(n / 2), 3))  # Affiche 2 graphes par ligne
-# names = rownames(data)
-# dev.off()
-# for (i in 1:nrow(data)) {
-#   dist_vals <- data[i, 3:ncol(data)]
-#   hist(dist_vals,
-#        main = paste(names[[i]]),
-#        xlab = "Values",
-#        col = "lightblue",
-#        border = "white",
-#        breaks = 20)
-# 
-#   abline(v = data[i, 1], col = "red", lwd = 2, lty = 1)  # point
-#   abline(v = data[i, 2], col = "blue", lwd = 2, lty = 2)  # limite
-#   legend("topright", legend = c("Point", "Limite"),
-#          col = c("red", "blue"), lty = c(1, 2), lwd = 2, bty = "n")
-# }
-# 
-# pdf("figures/05_empirical_pvalues_for_selected_multimediators.pdf", width = 12, height = 12)
-# 
-# par(mfrow = c(ceiling(n / 2), 3))  # Affiche 2 graphes par ligne
-# names = rownames(data)
-# for (i in 1:nrow(data)) {
-#   dist_vals <- data[i, 3:ncol(data)]
-#   hist(dist_vals,
-#        main = paste(names[[i]]),
-#        xlab = "Values",
-#        col = "lightblue",
-#        border = "white",
-#        breaks = 20)
-# 
-#   abline(v = data[i, 1], col = "red", lwd = 2, lty = 1)  # point
-#   abline(v = data[i, 2], col = "blue", lwd = 2, lty = 2)  # limite
-#   legend("topright", legend = c("AMR", "threshold"),
-#          col = c("red", "blue"), lty = c(1, 2), lwd = 2, bty = "n")
-# }
-# 
-# dev.off()
-# 
+idx = readRDS("results/06_TCGA_serial_med_top50_V2_K8_corrected_selected_combinaison.rds")
+positive_amr = amr_to_imm[which(rownames(amr_to_imm) %in% idx_woLF),]
+data = as.matrix(positive_amr)
+
+# Visualisation
+n = nrow(data)
+par(mfrow = c(ceiling(n / 2), 3))  # Affiche 2 graphes par ligne
+names = rownames(data)
+dev.off()
+for (i in 1:nrow(data)) {
+  dist_vals <- data[i, 3:ncol(data)]
+  hist(dist_vals,
+       main = paste(names[[i]]),
+       xlab = "Values",
+       col = "lightblue",
+       border = "white",
+       breaks = 20)
+
+  abline(v = data[i, 1], col = "red", lwd = 2, lty = 1)  # point
+  abline(v = data[i, 2], col = "blue", lwd = 2, lty = 2)  # limite
+  legend("topright", legend = c("Point", "Limite"),
+         col = c("red", "blue"), lty = c(1, 2), lwd = 2, bty = "n")
+}
+
+pdf("figures/05_empirical_pvalues_for_selected_multimediators.pdf", width = 12, height = 12)
+
+par(mfrow = c(ceiling(n / 2), 3))  # Affiche 2 graphes par ligne
+names = rownames(data)
+for (i in 1:nrow(data)) {
+  dist_vals <- data[i, 3:ncol(data)]
+  hist(dist_vals,
+       main = paste(names[[i]]),
+       xlab = "Values",
+       col = "lightblue",
+       border = "white",
+       breaks = 20)
+
+  abline(v = data[i, 1], col = "red", lwd = 2, lty = 1)  # point
+  abline(v = data[i, 2], col = "blue", lwd = 2, lty = 2)  # limite
+  legend("topright", legend = c("AMR", "threshold"),
+         col = c("red", "blue"), lty = c(1, 2), lwd = 2, bty = "n")
+}
+
+dev.off()
+
 
 ```
 
 ## Additive noise model
 
-``` {r, eval = F}
+``` {r, eval = FALSE}
 #ANM_CDS = read.csv("amr_to_imm_ANM_CDS.csv", header = TRUE) 
 rownames(ANM_CDS) = ANM_CDS$X
 ANM_CDS = ANM_CDS[,-1]
@@ -465,7 +465,7 @@ labels = smoking[rownames(datAMR)]
 cur = datIMM 
 cur$Smoking_Status <- labels[rownames(cur)]
 
-# Effectuer un test de Wilcoxon entre chaque colonne numérique et Smoking_Status
+# Perform a Wilcoxon test between each numeric column and Smoking_Status
 results <- sapply(names(cur)[names(cur) != "Smoking_Status"], function(var) {
   wilcox.test(cur[[var]] ~ cur$Smoking_Status)$p.value
 })
@@ -474,47 +474,39 @@ results <- sapply(names(cur)[names(cur) != "Smoking_Status"], function(var) {
 #  t.test(cur[[var]] ~ cur$Smoking_Status)$p.value
 #})
 
-# Afficher les p-values
+# Display the p-values
 results_df <- data.frame(Variable = names(results), P_value = results)
 print(results_df)
 
 ###PLOT
 
-
-
-
-# Colonnes des types cellulaires (tout sauf Smoking_Status)
+# Columns corresponding to cell types (everything except Smoking_Status)
 cell_vars <- setdiff(names(cur), "Smoking_Status")
 
-# Créer un dataframe long à la main (sans tidyr)
+# Manually create a long dataframe (without tidyr)
 cur_long <- data.frame(
   Smoking_Status = rep(cur$Smoking_Status, times = length(cell_vars)),
   Abundance = unlist(cur[cell_vars]),
   Cell_Type = rep(cell_vars, each = nrow(cur))
 )
 
-# Violin plots avec facettes
+# Violin plots with facets
 p = ggplot(cur_long, aes(x = Smoking_Status, y = Abundance, fill = Smoking_Status)) +
   geom_violin(trim = FALSE) +
-  geom_boxplot(width = 0.1, outlier.shape = NA) +  # Optionnel : ajouter boxplot à l'intérieur
+  geom_boxplot(width = 0.1, outlier.shape = NA) +  # Optional: add boxplot inside
   facet_wrap(~ Cell_Type, scales = "free_y") +
   theme_minimal() +
-  labs(title = "Violin plots des types cellulaires selon le statut tabagique",
-       x = "Statut tabagique",
-       y = "Abondance") +
+  labs(title = "Violin plots of cell types by smoking status",
+       x = "Smoking status",
+       y = "Abundance") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
         legend.position = "none")
 
 
 #ggsave(paste0("figures/05_wilcoxtest_boxplot.png"), plot = p, width = 6, height = 4)
-# p 
+# p  
+
  
-### LEs autres tests statistiques ne fonctionnent pas non plus
-
-
-
-
-
 ```
 
 ## Conclusion

@@ -20,8 +20,8 @@ param3 = "n"
 
 
 # load data
-simus = read.csv("../simulations/simulation_data/v2-10/csv/all_simu.csv", header = FALSE)
-step1s = read.csv("../simulations/simulation_data/v2-10/csv/all_step1s.csv", header = FALSE)
+simus = read.csv("simulations/simulation_data/v2-10/csv/all_simu.csv", header = FALSE)
+step1s = read.csv("simulations/simulation_data/v2-10/csv/all_step1s.csv", header = FALSE)
 
 
 # function
