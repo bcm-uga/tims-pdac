@@ -1,12 +1,18 @@
 ---
-title: "survival analysis with deconvolution exposition"
-output: html_document
-date: "2025-01-27"
+title: "Survival analysis with deconvolution exposition"
+output:
+  html_document:
+    toc: true
+    theme: united
+date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
 ---
 
-# TCGA data
+High-dimensional mediation analysis: identification of potential DNA methylation probes mediating the pathway between tobacco consumption and survival in PDAC patients.
+
+
 
 ```{r med_load}
+# TCGA data
 library(survival)
 library(ggplot2)
 library(see)
@@ -35,8 +41,6 @@ X_immune = X_deconv[rownames(X_deconv) %in% immune_cells,]
 # Mediation analysis
 
 ## Tobacco -> DNAm
-
-
 
 ```{r med_run}
 #mediation tobacco_dnam_survival with immune cells, LF estimation integration K = 8

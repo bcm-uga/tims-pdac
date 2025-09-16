@@ -1,9 +1,13 @@
  ---
 title: "Processing + Deconv_PDAC_TCGA"
-output: html_document
-date: "2025-01-27"
+output:
+  html_document:
+    toc: true
+    theme: united
+date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
 ---
 
+Consensus deconvolution method that integrates both bulk and single-cell reference datasets to enhance accuracy and robustness. 
 
 ```{r fix_var, include=FALSE}
 if (exists("var", inherits = TRUE) && !is.function(var)) rm("var", inherits = TRUE)

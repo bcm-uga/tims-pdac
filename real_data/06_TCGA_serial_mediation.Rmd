@@ -1,8 +1,16 @@
 ---
-title: "Untitled"
-output: html_document
-date: "2025-04-17"
+title: "Serial mediation"
+output:
+  html_document:
+    toc: true
+    theme: united
+date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
 ---
+
+
+We sought to determine whether indirect effects exist between tobacco exposure and survival in PDAC patients through mediator chains (AMR–immune infiltration pairs identified by causal discovery), acknowledging that in the context of multiple mediators the total effect can be decomposed by considering them simultaneously.
+
+
 
 ```{r}
 source("surv_serial_mediation_V2.R")
@@ -14,7 +22,7 @@ set.seed(123)
 ## Mediation analysis for each AMR - Immune cells type  pairs selected from causal discovery
 
 
-```{r serial mediation with LF A, B and F in covars alternative version}
+```{r serial mediation with LF  in covars version}
 
 med_tobacco_AMR = readRDS("results/03_tcga_top50_tobacco_AMR_fdr0_05_V2_K8_corrected.rds")
 
@@ -35,8 +43,7 @@ covar = res_med$hdmax2_step1_param$input$covar
 time = res_med$hdmax2_step1_param$input$survival_time_input
 status = res_med$hdmax2_step1_param$input$censoring_status_input
 
-#LF = res_med$hdmax2_step1_param$AS_1$U
-
+#LF 
 lfA = res_med$hdmax2_step1_param$AS_1$U[,1] 
 lfB = res_med$hdmax2_step1_param$AS_1$U[,2]
 lfC = res_med$hdmax2_step1_param$AS_1$U[,3]
@@ -46,7 +53,7 @@ lfF = res_med$hdmax2_step1_param$AS_1$U[,6]
 lfG = res_med$hdmax2_step1_param$AS_1$U[,7]
 lfH = res_med$hdmax2_step1_param$AS_1$U[,8]
 
-
+# pairs list
 DAGvalidated_CAT1 <- readRDS("results/05_DAG_validated_CAT1.rds")
 DAGvalidated_CAT1 <- gsub("_", " ", DAGvalidated_CAT1)
 
@@ -60,7 +67,12 @@ covars = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3])
 # create total immune class 
 immune_cons$all = rowSums(immune_cons)
 
-## DAG 1
+
+###########
+## DAG 1 ##
+###########
+
+# mediation for each pairs
 
 # AMR1 Bcells
 
@@ -711,12 +723,11 @@ colnames(res) = c("estimate","ci_low","ci_high", "effect_type", "feat")
 saveRDS(res, "results/06_TCGA_CAT1_serial_med_V2_K8_corrected_with_selected_LF.rds")
 
 
-```
+###########
+## DAG 2 ##
+###########
 
-
-
-```{r}
-## DAG 2
+# Mediation for each pairs
 
 # AMR8 B cells
 

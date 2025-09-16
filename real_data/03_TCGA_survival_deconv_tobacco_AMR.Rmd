@@ -1,7 +1,10 @@
 ---
 title: "AMR search + Mediation with AMR Data"
-output: html_document
-date: "2025-01-27"
+output:
+  html_document:
+    toc: true
+    theme: united
+date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
 ---
 
 
@@ -18,20 +21,23 @@ source("surv_aalen_alternative.R")
 set.seed(123)
 ```
 
-# TCGA data V2 K8 corrected
+
 
 ```{r amr_load4}
-
+# TCGA data V2 K8 corrected
 med_tobacco_dnam = readRDS("results/02_tcga_med_tobacco_dnam_V2_K8_corrected.rds")
 data_tcga = readRDS("tcga_pdac_mediation/results/01_tcga_data_expo_deconv.rds")
 
 ```
 
 # TCGA AMR mediation
-## Tobacco -> DNAm
-# 2 cpg min
-### seed = 0.05
+
 ```{r amr_tobacco DNAm AMR V2 K8, message=FALSE, eval=TRUE}
+
+### Tobacco -> DNAm
+### 2 cpg min
+### seed = 0.05
+
 set.seed(123)
 ######################
 #AMR research
