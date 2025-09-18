@@ -28,7 +28,7 @@ This repository contains all scripts and resources to reproduce the analyses and
 - **Real data analysis (TCGA-PAAD)**:  
   Run with `master_pdac.R`. Applies HDMAX2-surv to study how tobacco exposure influences pancreatic adenocarcinoma survival via DNA methylation and immune infiltration.  
 
-Due to size constraints, full processed results can be downloaded from **Zenodo**: [DOI: XXX].
+Due to size constraints, full processed results can be downloaded from **Zenodo**: [[DOI](https://doi.org/10.5281/zenodo.17144221).
 
 ---
 
