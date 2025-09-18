@@ -86,5 +86,5 @@ We recommend using R (≥ 4.2.0) with the following packages installed:
 Clone this repository:  
 
 ```bash
-git clone https://github.com/bcm-uga/tims-pdac.git
+git clone git@github.com:bcm-uga/tims-pdac.git
 cd tims-pdac
