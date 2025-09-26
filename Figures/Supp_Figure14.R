@@ -2,6 +2,7 @@
 ### Supp Figure 14 ###
 ######################
 library(ggplot2)
+library(patchwork)
 
 ### Load and process data
 
@@ -33,6 +34,10 @@ res_med = readRDS("real_data/results/02_tcga_med_tobacco_dnam_V2_K8_corrected.rd
 LFs = res_med$hdmax2_step1_param$AS_1$U
 colnames(LFs) = paste0("LF_", c("A", "B", "C", "D", "E", "F", "G", "H"))
 pairs_list = readRDS("real_data/results/05_signLFs_by_pairs-A-I.rds")
+
+#Match patient
+patient_id = rownames(tcga_data$M)
+datIMM = datIMM[patient_id,]
 
 ### Run analysis
 
@@ -130,7 +135,7 @@ p_amr = ggplot(df_plot_AMR, aes(x = AMR, y = LF)) +
   scale_shape_manual(values = c("Significant" = 21, "Not Significant" = 17)) + 
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  labs(title = "Correlations between LFs and immune variables",
+  labs(title = "Correlations between LFs and AMRs",
        shape = "pval < 0.01",
        x = "AMR",
        y = "LF")

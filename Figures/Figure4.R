@@ -28,7 +28,7 @@ datAMR = read.csv2("real_data/results/03_tcga_AMR_mean_meth_top50_fdr0_05_V2_K8_
 datAMR[] <- lapply(datAMR, function(x) as.numeric(as.character(x)))
 
 # Process the smoking variable from TCGA-PAAD metadata
-smoking = ifelse(tcga_data$tobacco==0, 'Non-smoker', 'Smoker')
+smoking = ifelse(tcga_data$tobacco_bin==0, 'Non-smoker', 'Smoker')
 names(smoking) = rownames(tcga_data$M)
 labels = smoking[rownames(datAMR)]
 smoking_status = as.numeric(as.factor(labels))
@@ -39,6 +39,9 @@ LFs = res_med$hdmax2_step1_param$AS_1$U
 colnames(LFs) = paste0("LF_", c("A", "B", "C", "D", "E", "F", "G", "H"))
 pairs_list = readRDS("real_data/results/05_signLFs_by_pairs-A-I.rds")
 
+#Match patient
+patient_id = rownames(tcga_data$M)
+datIMM = datIMM[patient_id,]
 
 ### PANEL A: TCGA-PAAD heatmap of deconvolution results
 
@@ -123,7 +126,7 @@ for (var in selected_vars) {
     fit,
     data = plot_data,
     risk.table = FALSE,
-    pval = TRUE,
+    pval = FALSE,
     title = var,
     legend.title = var,
     legend.labs = c("Low", "High"),
@@ -141,7 +144,7 @@ ggsave("figures/fig4_panelB.pdf", plot = combined_plot, width = 8, height = 5, d
 
 ### PANEL C: Causal discovery
 
-pval_thres = 0.1
+pval_thres = 0.15
 
 # details of each model for publication:
 
@@ -153,7 +156,7 @@ prop100= datIMM[,"B cells"]*100 #to interpret the HR has increase of 1 unit (1% 
 mod = survival::coxph(survival::Surv(tcga_data$time, tcga_data$status) ~ prop100 + tcga_data$age + tcga_data$gender +  tcga_data$grade)
 summary(mod)
 
-prop100= datIMM[,"DCs"]*100 #to interpret the HR has increase of 1 unit (1% of immune infiltration) lead to HR likely to dire than persons with 1% less
+prop100= datIMM[,"T cells"]*100 #to interpret the HR has increase of 1 unit (1% of immune infiltration) lead to HR likely to dire than persons with 1% less
 mod = survival::coxph(survival::Surv(tcga_data$time, tcga_data$status) ~ prop100 + tcga_data$age + tcga_data$gender +  tcga_data$grade)
 summary(mod)
 
@@ -170,7 +173,7 @@ tob_LF = apply(LFs, 2, function(x) {
 tob_LF
 
 
-# Step 1: Unconditional independence resting
+# Step 1 and 2: independence resting
 
 ## Tobacco-Survival association: Cox proportional hazards model
 
@@ -185,7 +188,7 @@ summary(IMMtot_TOB)
 IMMbcell_TOB = lm(datIMM[ ,"B cells"]~smoking_status + tcga_data$age + tcga_data$gender +  tcga_data$grade )    
 summary(IMMbcell_TOB) 
 
-IMMDCs_TOB = lm(datIMM[ ,"DCs"]~smoking_status + tcga_data$age + tcga_data$gender +  tcga_data$grade)
+IMMDCs_TOB = lm(datIMM[ ,"T cells"]~smoking_status + tcga_data$age + tcga_data$gender +  tcga_data$grade)
 summary(IMMDCs_TOB) 
 
 

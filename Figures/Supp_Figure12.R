@@ -55,9 +55,9 @@ feat_type = mapply(function(x, y) cpg_annotation[cpg_annotation$Start>=min(x) & 
 #load gene expression
 tcga_exprs0 = readRDS("real_data/tcga_pdac_mediation/data/TCGA_PAAD/study_TCGA-PAAD_trscr.rds")
 
-genes <- c("HOXC4", "TSC2", "FERMT3", "PIK3R1") # Known genes of interest
+genes <- c("MSX2", "KCNQ1", "PIWIL1", "EPHA3") # Known genes of interest
 expr = t(tcga_exprs0$data[genes, rownames(tcga_data$M)])
-df = data.frame(expr,status = ifelse(tcga_data$tobacco==0, 'Non-smoker', 'Smoker'))
+df = data.frame(expr,status = ifelse(tcga_data$tobacco_bin==0, 'Non-smoker', 'Smoker'))
 
 
 ### Plot Figure

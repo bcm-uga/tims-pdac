@@ -9,7 +9,7 @@ library(scales)
 ### Load and process data
 
 # Load the serial mediation results
-#res_mediation = readRDS("tcga_pdac_mediation/results/06_TCGA_serial_med_top50_V2_K8_corrected_without_LF.rds")
+
 res_mediation1 = readRDS("real_data/results/06_TCGA_CAT1_serial_med_V2_K8_corrected_with_selected_LF.rds")
 res_mediation2 = readRDS("real_data/results/06_TCGA_CAT2_serial_med_V2_K8_corrected_with_selected_LF.rds")
 res_mediation = rbind(res_mediation1, res_mediation2)
@@ -26,11 +26,9 @@ res_mediation$med2[res_mediation$med2 == "all"] <- "Tot. Imm."
 idx = paste(res_mediation$med1, res_mediation$med2, sep = "-")
 res_mediation$pairs = idx
 
-#DAGvalidated_CAT1 <- readRDS("tcga_pdac_mediation/results/05_DAGvalidated_CAT1.rds")
 DAGvalidated_CAT1 <- readRDS("real_data/results/05_DAG_validated_CAT1_withLF.rds")
 DAGvalidated_CAT1 <- gsub("_", " ", DAGvalidated_CAT1)
 
-#DAGvalidated_CAT2 <- readRDS("real_data/results/05_DAGvalidated_CAT2.rds")
 DAGvalidated_CAT2 <- readRDS("real_data/results/05_DAG_validated_CAT2_withLF.rds")
 DAGvalidated_CAT2 <- gsub("_", " ", DAGvalidated_CAT2)
 

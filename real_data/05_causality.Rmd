@@ -48,6 +48,11 @@ datIMM$all = rowSums(datIMM)
 res_med = readRDS("results/02_tcga_med_tobacco_dnam_V2_K8_corrected.rds")
 LFs = res_med$hdmax2_step1_param$AS_1$U
 colnames(LFs) = paste0("LF_", c("A", "B", "C", "D", "E", "F", "G", "H"))
+
+#Match patient
+patient_id = rownames(tcga_data$M)
+datIMM = datIMM[patient_id,]
+
 ```
 
 
@@ -154,7 +159,7 @@ names(smoking) = rownames(tcga_data$M)
 labels = smoking[rownames(datAMR)]
 smoking_status = as.numeric(as.factor(labels))
 
-pval_thres = 0.1
+pval_thres = 0.15
 
 # details of each model for publication:
 
@@ -166,7 +171,7 @@ prop100= datIMM[,"B cells"]*100 #to interpret the HR has increase of 1 unit (1% 
 mod = survival::coxph(survival::Surv(tcga_data$time, tcga_data$status) ~ prop100 + tcga_data$age + tcga_data$gender +  tcga_data$grade)
 summary(mod)
 
-prop100= datIMM[,"DCs"]*100 #to interpret the HR has increase of 1 unit (1% of immune infiltration) lead to HR likely to dire than persons with 1% less
+prop100= datIMM[,"T cells"]*100 #to interpret the HR has increase of 1 unit (1% of immune infiltration) lead to HR likely to dire than persons with 1% less
 mod = survival::coxph(survival::Surv(tcga_data$time, tcga_data$status) ~ prop100 + tcga_data$age + tcga_data$gender +  tcga_data$grade)
 summary(mod)
 
@@ -188,13 +193,13 @@ summary(SURV_TOB)
 
 ## Tobacco-Immune associations: Linear regression models
 
-IMMtot_TOB = lm(datIMM[ ,"Tot. Imm."]~smoking_status + tcga_data$age + tcga_data$gender +  tcga_data$grade)    
+IMMtot_TOB = lm(datIMM[ ,"Tot. Imm."]~smoking_status + tcga_data$age + tcga_data$gender +  tcga_data$grade )    
 summary(IMMtot_TOB) 
 
-IMMbcell_TOB = lm(datIMM[ ,"B cells"]~smoking_status + tcga_data$age + tcga_data$gender +  tcga_data$grade)    
+IMMbcell_TOB = lm(datIMM[ ,"B cells"]~smoking_status + tcga_data$age + tcga_data$gender +  tcga_data$grade )    
 summary(IMMbcell_TOB) 
 
-IMMDCs_TOB = lm(datIMM[ ,"DCs"]~smoking_status + tcga_data$age + tcga_data$gender +  tcga_data$grade)
+IMMDCs_TOB = lm(datIMM[ ,"T cells"]~smoking_status + tcga_data$age + tcga_data$gender +  tcga_data$grade)
 summary(IMMDCs_TOB) 
 
 
