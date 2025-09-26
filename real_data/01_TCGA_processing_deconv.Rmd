@@ -34,16 +34,44 @@ data_meth = readRDS("tcga_pdac_mediation/data/TCGA_PAAD/study_TCGA-PAAD_meth.rds
 data_trans = readRDS("tcga_pdac_mediation/data/TCGA_PAAD/study_TCGA-PAAD_trscr.rds")
 meta = read.csv2("tcga_pdac_mediation/data/TCGA_PAAD/PublishedSampleTable.csv",
                  header = TRUE)
-raw_exp = read.delim("tcga_pdac_mediation/data/TCGA_PAAD/clinical.project-tcga-paad.2024-07-30/exposure.tsv")
+# raw_exp = read.delim("tcga_pdac_mediation/data/TCGA_PAAD/clinical.project-tcga-paad.2024-07-30/exposure.tsv")
+# 
+# data <- read.table("tcga_pdac_mediation/data/TCGA_PAAD/clinical.project-tcga-paad.2024-07-30/exposure.tsv", 
+#                    header = TRUE,       # TRUE si la 1re ligne contient les noms de colonnes
+#                           # séparateur tabulation
+#                    stringsAsFactors = FALSE)
+data_raw <- read.delim("tcga_pdac_mediation/data/TCGA_PAAD/clinical.project-tcga-paad.2025-09-24/exposure.tsv", 
+                   header = TRUE, 
+                   stringsAsFactors = FALSE)
+
+data = data_raw[,c(1,2,3,36)]
+
+data <- data[ !grepl("--", data$exposures.tobacco_smoking_status %>% trimws()) | is.na(data$exposures.tobacco_smoking_status), ]
+
+# Filter smoking unrelevant categories
+raw_exp = data
+
+dim(raw_exp[raw_exp$exposures.tobacco_smoking_status=="Unknown",])
+
+raw_exp = raw_exp[raw_exp$exposures.tobacco_smoking_status!="Unknown",]
+
+dim(raw_exp[raw_exp$exposures.tobacco_smoking_status=="Current Reformed Smoker, Duration Not Specified",])
+
+raw_exp = raw_exp[raw_exp$exposures.tobacco_smoking_status!="Current Reformed Smoker, Duration Not Specified",]
+
+rownames(raw_exp) = paste0(raw_exp$cases.submitter_id, "-01A")
+
+
 
 idx_to_keep = meta$Tumor.Sample.ID[which(meta$Tumor.Sample.ID %in% colnames(data_trans$data))]
+idx_to_keep = idx_to_keep[idx_to_keep %in% rownames(raw_exp)]
+
 dat_meth = data_meth$data[, idx_to_keep]
 dat_trans = data_trans$data[, idx_to_keep]
 meta = meta[meta$Tumor.Sample.ID %in% idx_to_keep,]
 dim(dat_meth)
 dim(dat_trans)
 
-rownames(raw_exp) = paste0(raw_exp$case_submitter_id, "-01A")
 raw_exp = raw_exp[idx_to_keep,]
 
 # n=149
@@ -51,7 +79,7 @@ raw_exp = raw_exp[idx_to_keep,]
 # remove NAs from dat_meth
 idx_na_rows = apply(dat_meth, 1, function(x)
   any(is.na(x)))
-dat_meth = dat_meth[!idx_na_rows,]
+dat_meth = dat_meth[!idx_na_rows, idx_to_keep]
 dim(dat_meth)
 
 # filter out sex chromosomes
@@ -61,7 +89,7 @@ probes_chr_CHR = data_meth$platform[probes_chr,]$Chromosome
 probes_chr_BP = data_meth$platform[probes_chr,]$Start
 probes_chr_GeneSymbol = data_meth$platform[probes_chr,]$Gene_Symbol
 probes_chr_End = data_meth$platform[probes_chr,]$End
-dat_meth = dat_meth[probes_chr,]
+dat_meth = dat_meth[probes_chr,idx_to_keep]
 
 # keep only samples w/ follow up (n=143)
 dat_trans = dat_trans[, !is.na(meta$Follow.up.days) & !is.na(meta$Censored.1.yes.0.no) & meta$Follow.up.days!=0]
@@ -71,7 +99,8 @@ dat_meth = dat_meth[, colnames(dat_trans)]
 rownames(meta) = meta$Tumor.Sample.ID
 meta = meta[colnames(dat_trans), ]
 raw_exp = raw_exp[colnames(dat_trans), ]
-
+dim(dat_trans)
+dim(raw_exp)
 rm(idx_na_rows,idx_to_keep,probes_chr)
 
 gc()
@@ -273,19 +302,18 @@ M = t(dat_meth)
 time = meta$Follow.up.days
 cens = !meta$Censored.1.yes.0.no
 
-# smoking exposure
-smoking = raw_exp$cigarettes_per_day
-smoking = as.numeric(smoking)
-smoking[is.na(smoking)] = 0
+smoking = raw_exp$exposures.tobacco_smoking_status
 smoking_bin = smoking
-smoking_bin[smoking>0] = 1
-
-# alcohol exposure
-alcohol = raw_exp$alcohol_history
-alcohol[alcohol=="Yes"] = 1
-alcohol[alcohol=="No"] = 0
-alcohol[alcohol=="Not Reported"] = NA
-alcohol = as.numeric(alcohol)
+smoking_bin[smoking=="Lifelong Non-Smoker"] = 0
+smoking_bin[smoking=="Current Reformed Smoker for > 15 yrs"] = 0
+smoking_bin[smoking=="Current Reformed Smoker for < or = 15 yrs"] = 1
+smoking_bin[smoking=="Current Smoker"] = 1
+# # alcohol exposure
+# alcohol = raw_exp$alcohol_history
+# alcohol[alcohol=="Yes"] = 1
+# alcohol[alcohol=="No"] = 0
+# alcohol[alcohol=="Not Reported"] = NA
+# alcohol = as.numeric(alcohol)
 
 # covariables
 age = meta$Age.at.initial.pathologic.diagnosis
@@ -307,7 +335,7 @@ data = list(#M_13 = M_sample_13,
             X_deconv = X_expo,
             tobacco_bin = smoking_bin,
             tobacco = smoking,
-            alcohol = alcohol,
+            #alcohol = alcohol,
             time = time,
             status = cens,
             age = age,

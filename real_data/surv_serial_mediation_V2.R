@@ -3,151 +3,153 @@ library(survival)
 library(boot)
 library(dplyr)
 
-# Main function: Serial mediation with survival outcome
-serial_mediation_survie2 <- function(expo, mediateur1, mediateur2, covars, time, status, R = 1000) {
-  
-  # Prepare analysis dataset
-  data_to_analyse <- data.frame(
-    expo = expo,
-    m1 = mediateur1,
-    m2 = mediateur2,
-    time = as.numeric(time),
-    status = as.numeric(status),
-    covars
-  )
-  
-  # Remove individuals with time = 0
-  data_to_analyse <- data_to_analyse[data_to_analyse$time > 0, ]
-  data_to_analyse$id <- 1:nrow(data_to_analyse)
-  
-  # Function to estimate effects
-  theta <- function(data, index) {
-    dat <- data[index, ]
-    
-    # Models for mediators
-    fitM1 <- lm(m1 ~ expo + ., data = dat[, c("m1", "expo", colnames(covars))])
-    fitM2 <- lm(m2 ~ expo + m1 + ., data = dat[, c("m2", "expo", "m1", colnames(covars))])
-    
-    # Automatically select best survival distribution using AIC
-    dists <- c("weibull", "exponential", "loglogistic", "lognormal")
-    aics <- sapply(dists, function(d) {
-      tryCatch({
-        AIC(survreg(Surv(time, status) ~ expo + m1 + m2 + ., 
-                    data = dat[, c("time", "status", "expo", "m1", "m2", colnames(covars))],
-                    dist = d))
-      }, error = function(e) Inf)
-    })
-    best_dist <- dists[which.min(aics)]
-    
-    # Survival model with selected distribution
-    fitY <- survreg(Surv(time, status) ~ expo + m1 + m2 + ., 
-                    data = dat[, c("time", "status", "expo", "m1", "m2", colnames(covars))], 
-                    dist = best_dist)
-    
-    # Create counterfactual dataset (4 scenarios of a1, a2, a3)
-    dat_ext <- dat[rep(1:nrow(dat), each = 4), ]
-    dat_ext$a1 <- rep(rep(0:1, each = 2), times = nrow(dat))
-    dat_ext$a2 <- rep(0:1, times = 2 * nrow(dat))
-    dat_ext$a3 <- rep(0:1, each = 2 * nrow(dat))
-    
-    # Predict mediators
-    dat_ext$pred_m1_a1 <- predict(fitM1, newdata = within(dat_ext, { expo = a1 }))
-    dat_ext$pred_m2_a2m1a1 <- predict(fitM2, newdata = within(dat_ext, {
-      expo = a2
-      m1 = pred_m1_a1
-    }))
-    
-    # Predict survival outcome
-    dat_ext$Y_hat <- predict(fitY, newdata = within(dat_ext, {
-      expo = a3
-      m1 = pred_m1_a1
-      m2 = pred_m2_a2m1a1
-    }), type = "response")
-    
-    # Estimate effects
-    fitNEM <- lm(Y_hat ~ a3 + a1 + a2, data = dat_ext)
-    coef_fit <- coef(fitNEM)
-    
-    total_effect <- coef_fit["a3"] + coef_fit["a1"] + coef_fit["a2"]
-    direct_effect <- coef_fit["a3"]
-    indirect_m1 <- coef_fit["a1"]
-    indirect_m2 <- coef_fit["a2"]
-    indirect_joint <- indirect_m1 + indirect_m2
-    
-    return(c(direct_effect, indirect_m1, indirect_m2, indirect_joint, total_effect))
-  }
-  
-  # Bootstrap estimation
-  set.seed(42)
-  boot_res <- boot(data = data_to_analyse, statistic = theta, R = R)
-  
-  # Compute bootstrap percentile confidence intervals
-  linfunCI.perc <- function(boot.out, index) {
-    est <- boot.out$t0[index]
-    ci <- quantile(boot.out$t[, index], probs = c(0.025, 0.975), na.rm = TRUE)
-    return(c(estimate = est, ci_low = ci[1], ci_high = ci[2]))
-  }
-  
-  names_effets <- c("Direct effect", "Indirect effect via M1", "Indirect effect via M2",
-                    "Total indirect effect", "Total effect")
-  results <- t(sapply(1:5, function(i) linfunCI.perc(boot_res, i)))
-  rownames(results) <- names_effets
-  
-  return(round(results, 6))
-}
-
-# Function to apply mediation to all DMR × Cell type pairs
-run_serial_mediation_grid2 <- function(
-    mat_dmr,
-    mat_cell,
-    expo,
-    covars,
-    time,
-    status,
-    R = 1000
-) {
-  results_list <- list()
-  
-  for (i in 1:ncol(mat_dmr)) {
-    for (j in 1:ncol(mat_cell)) {
-      
-      cat("Running mediation:", colnames(mat_dmr)[i], "x", colnames(mat_cell)[j], "\n")
-      
-      res <- tryCatch({
-        serial_mediation_survie2(
-          expo = expo,
-          mediateur1 = mat_dmr[, i],
-          mediateur2 = mat_cell[, j],
-          covars = covars,
-          time = time,
-          status = status,
-          R = R
-        )
-      }, error = function(e) {
-        message("Error for", colnames(mat_dmr)[i], "x", colnames(mat_cell)[j], ":", e$message)
-        return(NULL)
-      })
-      
-      if (!is.null(res)) {
-        res_df <- as.data.frame(res)
-        res_df$med1 <- colnames(mat_dmr)[i]
-        res_df$med2 <- colnames(mat_cell)[j]
-        res_df$effect_type <- rownames(res)
-        results_list[[length(results_list) + 1]] <- res_df
-      }
-    }
-  }
-  
-  if (length(results_list) > 0) {
-    all_results <- do.call(rbind, results_list)
-    rownames(all_results) <- NULL
-    return(all_results)
-  } else {
-    warning("No valid result generated.")
-    return(NULL)
-  }
-}
-
+# # Main function: Serial mediation with survival outcome
+# serial_mediation_survie2 <- function(expo, mediateur1, mediateur2, covars, time, status, R = 1000) {
+#   
+#   # Prepare analysis dataset
+#   data_to_analyse <- data.frame(
+#     expo = expo,
+#     m1 = mediateur1,
+#     m2 = mediateur2,
+#     time = as.numeric(time),
+#     status = as.numeric(status),
+#     covars
+#   )
+#   
+#   # Remove individuals with time = 0
+#   data_to_analyse <- data_to_analyse[data_to_analyse$time > 0, ]
+#   data_to_analyse$id <- 1:nrow(data_to_analyse)
+#   
+#   # Function to estimate effects
+#   theta <- function(data, index) {
+#     dat <- data[index, ]
+#     
+#     # Models for mediators
+#     fitM1 <- lm(m1 ~ expo + ., data = dat[, c("m1", "expo", colnames(covars))])
+#     fitM2 <- lm(m2 ~ expo + m1 + ., data = dat[, c("m2", "expo", "m1", colnames(covars))])
+#     
+#     # Automatically select best survival distribution using AIC
+#     dists <- c("weibull", "exponential", "loglogistic", "lognormal")
+#     aics <- sapply(dists, function(d) {
+#       tryCatch({
+#         AIC(survreg(Surv(time, status) ~ expo + m1 + m2 + ., 
+#                     data = dat[, c("time", "status", "expo", "m1", "m2", colnames(covars))],
+#                     dist = d))
+#       }, error = function(e) Inf)
+#     })
+#     best_dist <- dists[which.min(aics)]
+#     
+#     # Survival model with selected distribution
+#     fitY <- survreg(Surv(time, status) ~ expo + m1 + m2 + ., 
+#                     data = dat[, c("time", "status", "expo", "m1", "m2", colnames(covars))], 
+#                     dist = best_dist)
+#     
+#     # Create counterfactual dataset (4 scenarios of a1, a2, a3)
+#     dat_ext <- dat[rep(1:nrow(dat), each = 4), ]
+#     dat_ext$a1 <- rep(rep(0:1, each = 2), times = nrow(dat))
+#     dat_ext$a2 <- rep(0:1, times = 2 * nrow(dat))
+#     dat_ext$a3 <- rep(0:1, each = 2 * nrow(dat))
+#     
+#     # Predict mediators
+#     dat_ext$pred_m1_a1 <- predict(fitM1, newdata = within(dat_ext, { expo = a1 }))
+#     dat_ext$pred_m2_a2m1a1 <- predict(fitM2, newdata = within(dat_ext, {
+#       expo = a2
+#       m1 = pred_m1_a1
+#     }))
+#     
+#     # Predict survival outcome
+#     dat_ext$Y_hat <- predict(fitY, newdata = within(dat_ext, {
+#       expo = a3
+#       m1 = pred_m1_a1
+#       m2 = pred_m2_a2m1a1
+#     }), type = "response")
+#     
+#     # Estimate effects
+#     fitNEM <- lm(Y_hat ~ a3 + a1 + a2, data = dat_ext)
+#     coef_fit <- coef(fitNEM)
+#     
+#     total_effect <- coef_fit["a3"] + coef_fit["a1"] + coef_fit["a2"]
+#     direct_effect <- coef_fit["a3"]
+#     indirect_m1 <- coef_fit["a1"]
+#     indirect_m2 <- coef_fit["a2"]
+#     indirect_joint <- indirect_m1 + indirect_m2
+#     
+#     return(c(direct_effect, indirect_m1, indirect_m2, indirect_joint, total_effect))
+#   }
+#   
+#   # Bootstrap estimation
+#   set.seed(42)
+#   boot_res <- boot(data = data_to_analyse, statistic = theta, R = R)
+#   
+#   linfunCI.perc <- function(boot.out, index, conf = 0.90) {
+#     est <- boot.out$t0[index]
+#     alpha <- (1 - conf) / 2
+#     v <- boot.out$t[, index]
+#     ci <- quantile(v, probs = c(alpha, 1 - alpha), na.rm = TRUE)
+#     c(estimate = est, ci_low = ci[1], ci_high = ci[2])
+#   }
+#   
+#   
+#   names_effets <- c("Direct effect", "Indirect effect via M1", "Indirect effect via M2",
+#                     "Total indirect effect", "Total effect")
+#   results <- t(sapply(1:5, function(i) linfunCI.perc(boot_res, i)))
+#   rownames(results) <- names_effets
+#   
+#   return(round(results, 6))
+# }
+# 
+# # Function to apply mediation to all DMR × Cell type pairs
+# run_serial_mediation_grid2 <- function(
+#     mat_dmr,
+#     mat_cell,
+#     expo,
+#     covars,
+#     time,
+#     status,
+#     R = 1000
+# ) {
+#   results_list <- list()
+#   
+#   for (i in 1:ncol(mat_dmr)) {
+#     for (j in 1:ncol(mat_cell)) {
+#       
+#       cat("Running mediation:", colnames(mat_dmr)[i], "x", colnames(mat_cell)[j], "\n")
+#       
+#       res <- tryCatch({
+#         serial_mediation_survie2(
+#           expo = expo,
+#           mediateur1 = mat_dmr[, i],
+#           mediateur2 = mat_cell[, j],
+#           covars = covars,
+#           time = time,
+#           status = status,
+#           R = R
+#         )
+#       }, error = function(e) {
+#         message("Error for", colnames(mat_dmr)[i], "x", colnames(mat_cell)[j], ":", e$message)
+#         return(NULL)
+#       })
+#       
+#       if (!is.null(res)) {
+#         res_df <- as.data.frame(res)
+#         res_df$med1 <- colnames(mat_dmr)[i]
+#         res_df$med2 <- colnames(mat_cell)[j]
+#         res_df$effect_type <- rownames(res)
+#         results_list[[length(results_list) + 1]] <- res_df
+#       }
+#     }
+#   }
+#   
+#   if (length(results_list) > 0) {
+#     all_results <- do.call(rbind, results_list)
+#     rownames(all_results) <- NULL
+#     return(all_results)
+#   } else {
+#     warning("No valid result generated.")
+#     return(NULL)
+#   }
+# }
+# 
 
 
 # Function to apply mediation to all DMR × Cell type pairs
@@ -733,10 +735,12 @@ serial_mediation_survie2_alter <- function(expo, mediateur1, mediateur2, covars_
   boot_res <- boot(data = data_to_analyse, statistic = theta, R = R)
   
   # Compute bootstrap percentile confidence intervals
-  linfunCI.perc <- function(boot.out, index) {
+  linfunCI.perc <- function(boot.out, index, conf = 0.90) {
     est <- boot.out$t0[index]
-    ci <- quantile(boot.out$t[, index], probs = c(0.025, 0.975), na.rm = TRUE)
-    return(c(estimate = est, ci_low = ci[1], ci_high = ci[2]))
+    alpha <- (1 - conf) / 2
+    v <- boot.out$t[, index]
+    ci <- quantile(v, probs = c(alpha, 1 - alpha), na.rm = TRUE)
+    c(estimate = est, ci_low = ci[1], ci_high = ci[2])
   }
   
   names_effets <- c("Direct effect", "Indirect effect via M1", "Indirect effect via M2",

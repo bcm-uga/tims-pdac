@@ -26,10 +26,10 @@ res_mediation$med2[res_mediation$med2 == "all"] <- "Tot. Imm."
 idx = paste(res_mediation$med1, res_mediation$med2, sep = "-")
 res_mediation$pairs = idx
 
-DAGvalidated_CAT1 <- readRDS("real_data/results/05_DAG_validated_CAT1_withLF.rds")
+DAGvalidated_CAT1 <- readRDS("real_data/results/05_DAG_validated_CAT1_withLF_2.rds")
 DAGvalidated_CAT1 <- gsub("_", " ", DAGvalidated_CAT1)
 
-DAGvalidated_CAT2 <- readRDS("real_data/results/05_DAG_validated_CAT2_withLF.rds")
+DAGvalidated_CAT2 <- readRDS("real_data/results/05_DAG_validated_CAT2_withLF_2.rds")
 DAGvalidated_CAT2 <- gsub("_", " ", DAGvalidated_CAT2)
 
 
@@ -125,7 +125,9 @@ plot_all_pairs_all_effects <- function(res_df,
 ### PANEL B: DAG 1
 
 res_significatif = res_mediation[which(res_mediation$pairs %in% DAGvalidated_CAT1), ]
-p_sig_pairs <- plot_all_pairs_all_effects(res_significatif)
+
+
+p_sig_pairs <- plot_all_pairs_all_effects(res_mediation1)
 
 ggsave("figures/fig5_panelB.pdf",
        p_sig_pairs, width = 11, height = 5, units = "in")
@@ -134,7 +136,7 @@ ggsave("figures/fig5_panelB.pdf",
 
 
 res_significatif = res_mediation[which(res_mediation$pairs %in% DAGvalidated_CAT2), ]
-p_sig_pairs <- plot_all_pairs_all_effects(res_significatif)
+p_sig_pairs <- plot_all_pairs_all_effects(res_mediation2)
 
 ggsave("figures/fig5_panelC.pdf",
        p_sig_pairs, width = 11, height = 5, units = "in")

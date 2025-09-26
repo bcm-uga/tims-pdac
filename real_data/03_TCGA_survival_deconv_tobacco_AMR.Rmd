@@ -26,7 +26,7 @@ set.seed(123)
 ```{r amr_load4}
 # TCGA data V2 K8 corrected
 med_tobacco_dnam = readRDS("results/02_tcga_med_tobacco_dnam_V2_K8_corrected.rds")
-data_tcga = readRDS("tcga_pdac_mediation/results/01_tcga_data_expo_deconv.rds")
+data_tcga = readRDS("results/01_tcga_data_expo_deconv.rds")
 
 ```
 

@@ -1,0 +1,62 @@
+---
+title: "step2 mediation"
+output: html_document
+date: "2025-07-11"
+---
+
+
+```{r init}
+library(survival)
+library(ggplot2)
+library(epimedtools)
+source("surv_parametric_alternative.R")
+source("helper_functions.R")
+
+source("surv_aalen_alternative.R")
+set.seed(123)
+```
+
+# TCGA data V2 K8 corrected
+
+```{r load4}
+
+med_tobacco_dnam = readRDS("results/02_tcga_med_tobacco_dnam_V2_K8_corrected.rds")
+data_tcga = readRDS("results/01_tcga_data_expo_deconv.rds")
+
+```
+
+```{r step2}
+library(hdmax2)
+med_tobacco_dnam$hdmax2_step1_param$max2_pvalues
+
+q_values = hdmax2::hdmax2_qvalue(med_tobacco_dnam$hdmax2_step1_param$max2_pvalues)
+
+candidate_mediator_005 <- q_values$qv[q_values$qv<= 0.05]
+candidate_mediator_005
+
+m_005 = data_tcga$M[, names(candidate_mediator_005)]
+
+hdmax2_step2_005 = estimate_effect_surv_param(object = med_tobacco_dnam$hdmax2_step1_param, m = m_005)
+
+acme = hdmax2_step2_005$effects$univariate$ACME
+res_005 = list(all_step2_res = hdmax2_step2_005,
+              step2_res_4 = acme,
+              meth_mat = m_005)
+saveRDS(res_005, "results/03_tcga_top50_tobacco_CPG_fdr0_05_V2_K8_corrected.rds")
+```
+
+
+```{r}
+candidate_mediator_01 <- q_values$qv[q_values$qv<= 0.1]
+candidate_mediator_01
+
+m_01 = data_tcga$M[, names(candidate_mediator_01)]
+
+hdmax2_step2_01 = estimate_effect_surv_param(object = med_tobacco_dnam$hdmax2_step1_param, m = m_01)
+
+acme = hdmax2_step2_01$effects$univariate$ACME
+res_01 = list(all_step2_res = hdmax2_step2_01,
+              step2_res_6 = acme,
+              meth_mat = m_01)
+saveRDS(res_01, "results/03_tcga_top50_tobacco_CPG_fdr0_1_V2_K8_corrected.rds")
+```

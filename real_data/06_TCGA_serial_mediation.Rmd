@@ -12,17 +12,18 @@ We sought to determine whether indirect effects exist between tobacco exposure a
 
 
 
+
+## Mediation analysis for each AMR - Immune cells type  pairs selected from causal discovery
+
+
+
+
 ```{r}
 source("surv_serial_mediation_V2.R")
 
 library(dplyr)
 set.seed(123)
-```
 
-## Mediation analysis for each AMR - Immune cells type  pairs selected from causal discovery
-
-
-```{r serial mediation with LF  in covars version}
 
 med_tobacco_AMR = readRDS("results/03_tcga_top50_tobacco_AMR_fdr0_05_V2_K8_corrected.rds")
 
@@ -30,7 +31,7 @@ mean_meth_AMR = readRDS("results/03_tcga_mean_meth_AMR_fdr0_05_V2_K8_corrected.r
  
 res_med = readRDS("results/02_tcga_med_tobacco_dnam_V2_K8_corrected.rds")
 
-tcga_data = readRDS("tcga_pdac_mediation/results/01_tcga_data_expo_deconv.rds")
+tcga_data = readRDS("results/01_tcga_data_expo_deconv.rds")
 X_deconv = tcga_data$X_deconv$Consensus
 immune_cells = c("Macrophages","B cells", "T cells", "NK","DCs")
 X_immune = X_deconv[rownames(X_deconv) %in% immune_cells,]
@@ -54,11 +55,11 @@ lfG = res_med$hdmax2_step1_param$AS_1$U[,7]
 lfH = res_med$hdmax2_step1_param$AS_1$U[,8]
 
 # pairs list
-DAGvalidated_CAT1 <- readRDS("results/05_DAG_validated_CAT1.rds")
-DAGvalidated_CAT1 <- gsub("_", " ", DAGvalidated_CAT1)
-
-DAGvalidated_CAT2 <- readRDS("results/05_DAG_validated_CAT2.rds")
-DAGvalidated_CAT2 <- gsub("_", " ", DAGvalidated_CAT2)
+# DAGvalidated_CAT1 <- readRDS("results/05_DAG_validated_CAT1.rds")
+# DAGvalidated_CAT1 <- gsub("_", " ", DAGvalidated_CAT1)
+# 
+# DAGvalidated_CAT2 <- readRDS("results/05_DAG_validated_CAT2.rds")
+# DAGvalidated_CAT2 <- gsub("_", " ", DAGvalidated_CAT2)
 
 select_LF = readRDS("results/05_signLFs_by_pairs-A-I.rds")
 
@@ -68,49 +69,26 @@ covars = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3])
 immune_cons$all = rowSums(immune_cons)
 
 
-###########
-## DAG 1 ##
-###########
-
-# mediation for each pairs
-
-# AMR1 Bcells
-
-mean_meth_AMR_temp = mean_meth_AMR$AMR1
-mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
-
-immune_cons_temp = immune_cons$`B cells`
-immune_cons_temp = as.matrix(immune_cons_temp)
 
 
-covars_LF = covars
-
-res_mediation_AMR1_BC <- run_serial_mediation_grid2_alter(
-  mat_dmr = mean_meth_AMR_temp,
-  mat_cell = immune_cons_temp,
-  expo = expo,
-  covars_LF = covars_LF,
-  covars = covars,
-  time = time,
-  status = status,
-  R = 1000  # pour aller plus vite
-)
-res_mediation_AMR1_BC$feat = c(rep("AMR1_B cells",5))
-
-res = as.data.frame(res_mediation_AMR1_BC)
+DAGvalidated_CAT1 <- readRDS("results/05_DAG_validated_CAT1_withLF_2.rds")
+DAGvalidated_CAT1 <- gsub("_", " ", DAGvalidated_CAT1)
 
 
-# AMR1 all
 
-mean_meth_AMR_temp = mean_meth_AMR$AMR1
+# AMR 4 BC
+# error
+# AMR 4 all
+
+mean_meth_AMR_temp = mean_meth_AMR$AMR4
 mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
 
 immune_cons_temp = immune_cons$all
 immune_cons_temp = as.matrix(immune_cons_temp)
 
-covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfA )
+covars_LF = covars
 
-res_mediation_temp <- run_serial_mediation_grid2_alter(
+res_mediation_init <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
   mat_cell = immune_cons_temp,
   expo = expo,
@@ -120,13 +98,14 @@ res_mediation_temp <- run_serial_mediation_grid2_alter(
   status = status,
   R = 1000  # pour aller plus vite
 )
-res_mediation_temp$feat = c(rep("AMR1_all",5))
 
-res = rbind(res, res_mediation_temp)
+res_mediation_init$feat = c(rep("AMR4_B cells",5))
 
-# AMR2 Bcells
+res = as.data.frame(res_mediation_init)
 
-mean_meth_AMR_temp = mean_meth_AMR$AMR2
+# AMR 5 B cells
+
+mean_meth_AMR_temp = mean_meth_AMR$AMR5
 mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
 
 immune_cons_temp = immune_cons$`B cells`
@@ -144,18 +123,67 @@ res_mediation_temp <- run_serial_mediation_grid2_alter(
   status = status,
   R = 1000  # pour aller plus vite
 )
-res_mediation_temp$feat = c(rep("AMR2_B cells",5))
+res_mediation_temp$feat = c(rep("AMR5_B cells",5))
 res = rbind(res, res_mediation_temp)
 
-# AMR6 all
+# AMR 5 T cells
 
-mean_meth_AMR_temp = mean_meth_AMR$AMR6
+mean_meth_AMR_temp = mean_meth_AMR$AMR5
+mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
+
+immune_cons_temp = immune_cons$`T cells`
+immune_cons_temp = as.matrix(immune_cons_temp)
+
+covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfB)
+
+res_mediation_temp <- run_serial_mediation_grid2_alter(
+  mat_dmr = mean_meth_AMR_temp,
+  mat_cell = immune_cons_temp,
+  expo = expo,
+  covars_LF = covars_LF,
+  covars = covars,
+  time = time,
+  status = status,
+  R = 1000  # pour aller plus vite
+)
+res_mediation_temp$feat = c(rep("AMR5_T cells",5))
+res = rbind(res, res_mediation_temp)
+
+# AMR 9 T cells
+
+mean_meth_AMR_temp = mean_meth_AMR$AMR9
+mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
+
+immune_cons_temp = immune_cons$`T cells`
+immune_cons_temp = as.matrix(immune_cons_temp)
+
+covars_LF = covars
+
+res_mediation_temp <- run_serial_mediation_grid2_alter(
+  mat_dmr = mean_meth_AMR_temp,
+  mat_cell = immune_cons_temp,
+  expo = expo,
+  covars_LF = covars_LF,
+  covars = covars,
+  time = time,
+  status = status,
+  R = 1000  # pour aller plus vite
+)
+res_mediation_temp$feat = c(rep("AMR9_T cells",5))
+res = rbind(res, res_mediation_temp)
+
+
+
+
+# AMR 9  all
+
+mean_meth_AMR_temp = mean_meth_AMR$AMR9
 mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
 
 immune_cons_temp = immune_cons$all
 immune_cons_temp = as.matrix(immune_cons_temp)
 
-covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfA, lfB )
+covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -167,19 +195,18 @@ res_mediation_temp <- run_serial_mediation_grid2_alter(
   status = status,
   R = 1000  # pour aller plus vite
 )
-res_mediation_temp$feat = c(rep("AMR6_all",5))
+res_mediation_temp$feat = c(rep("AMR9_all",5))
 res = rbind(res, res_mediation_temp)
 
+# AMR 11 bc
 
-# AMR8 DC
-
-mean_meth_AMR_temp = mean_meth_AMR$AMR8
+mean_meth_AMR_temp = mean_meth_AMR$AMR11
 mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
 
-immune_cons_temp = immune_cons$DCs
+immune_cons_temp = immune_cons$`B cells`
 immune_cons_temp = as.matrix(immune_cons_temp)
 
-covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfA )
+covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -191,19 +218,19 @@ res_mediation_temp <- run_serial_mediation_grid2_alter(
   status = status,
   R = 1000  # pour aller plus vite
 )
-res_mediation_temp$feat = c(rep("AMR8_DCs",5))
+res_mediation_temp$feat = c(rep("AMR11_B cells",5))
 res = rbind(res, res_mediation_temp)
 
 
-# AMR8 all
+# AMR 11 bc
 
-mean_meth_AMR_temp = mean_meth_AMR$AMR8
+mean_meth_AMR_temp = mean_meth_AMR$AMR11
 mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
 
-immune_cons_temp = immune_cons$all
+immune_cons_temp = immune_cons$`T cells`
 immune_cons_temp = as.matrix(immune_cons_temp)
 
-covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfA )
+covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -215,18 +242,66 @@ res_mediation_temp <- run_serial_mediation_grid2_alter(
   status = status,
   R = 1000  # pour aller plus vite
 )
-res_mediation_temp$feat = c(rep("AMR8_all",5))
+res_mediation_temp$feat = c(rep("AMR11_T cells",5))
 res = rbind(res, res_mediation_temp)
 
-# AMR15 Bcells
+# # AMR 11 all
+# mean_meth_AMR_temp = mean_meth_AMR$AMR11
+# mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
+# 
+# immune_cons_temp = immune_cons$all
+# immune_cons_temp = as.matrix(immune_cons_temp)
+# 
+# covars_LF = covars
+# 
+# res_mediation_temp <- run_serial_mediation_grid2_alter(
+#   mat_dmr = mean_meth_AMR_temp,
+#   mat_cell = immune_cons_temp,
+#   expo = expo,
+#   covars_LF = covars_LF,
+#   covars = covars,
+#   time = time,
+#   status = status,
+#   R = 1000  # pour aller plus vite
+# )
+# res_mediation_temp$feat = c(rep("AMR11_all",5))
+# res = rbind(res, res_mediation_temp)
+
+## error
+
+# AMR 12 BC 
+
+mean_meth_AMR_temp = mean_meth_AMR$AMR12
+mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
+
+immune_cons_temp = immune_cons$`B cells`
+immune_cons_temp = as.matrix(immune_cons_temp)
+
+covars_LF = covars
+
+res_mediation_temp <- run_serial_mediation_grid2_alter(
+  mat_dmr = mean_meth_AMR_temp,
+  mat_cell = immune_cons_temp,
+  expo = expo,
+  covars_LF = covars_LF,
+  covars = covars,
+  time = time,
+  status = status,
+  R = 1000  # pour aller plus vite
+)
+res_mediation_temp$feat = c(rep("AMR12_B cells",5))
+res = rbind(res, res_mediation_temp)
+
+
+# AMR 15 all 
 
 mean_meth_AMR_temp = mean_meth_AMR$AMR15
 mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
 
-immune_cons_temp = immune_cons$`B cells`
+immune_cons_temp = immune_cons$all
 immune_cons_temp = as.matrix(immune_cons_temp)
 
-covars_LF = covars
+covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfA, lfB, lfH)
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -238,19 +313,19 @@ res_mediation_temp <- run_serial_mediation_grid2_alter(
   status = status,
   R = 1000  # pour aller plus vite
 )
-res_mediation_temp$feat = c(rep("AMR15_B cells",5))
-
+res_mediation_temp$feat = c(rep("AMR15_all",5))
 res = rbind(res, res_mediation_temp)
 
-# AMR17 Bcells
+
+# AMR 17 TC 
 
 mean_meth_AMR_temp = mean_meth_AMR$AMR17
 mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
 
-immune_cons_temp = immune_cons$`B cells`
+immune_cons_temp = immune_cons$`T cells`
 immune_cons_temp = as.matrix(immune_cons_temp)
 
-covars_LF = covars
+covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfB)
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -262,37 +337,11 @@ res_mediation_temp <- run_serial_mediation_grid2_alter(
   status = status,
   R = 1000  # pour aller plus vite
 )
-res_mediation_temp$feat = c(rep("AMR17_B cells",5))
-
+res_mediation_temp$feat = c(rep("AMR17_T cells",5))
 res = rbind(res, res_mediation_temp)
 
 
-# AMR17 DC
-
-mean_meth_AMR_temp = mean_meth_AMR$AMR17
-mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
-
-immune_cons_temp = immune_cons$DCs
-immune_cons_temp = as.matrix(immune_cons_temp)
-
-covars_LF = covars
-
-res_mediation_temp <- run_serial_mediation_grid2_alter(
-  mat_dmr = mean_meth_AMR_temp,
-  mat_cell = immune_cons_temp,
-  expo = expo,
-  covars_LF = covars_LF,
-  covars = covars,
-  time = time,
-  status = status,
-  R = 1000  # pour aller plus vite
-)
-res_mediation_temp$feat = c(rep("AMR17_DCs",5))
-
-res = rbind(res, res_mediation_temp)
-
-
-# AMR17 all
+# AMR 17 all 
 
 mean_meth_AMR_temp = mean_meth_AMR$AMR17
 mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
@@ -300,7 +349,7 @@ mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
 immune_cons_temp = immune_cons$all
 immune_cons_temp = as.matrix(immune_cons_temp)
 
-covars_LF = covars
+covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfA, lfB)
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -313,20 +362,19 @@ res_mediation_temp <- run_serial_mediation_grid2_alter(
   R = 1000  # pour aller plus vite
 )
 res_mediation_temp$feat = c(rep("AMR17_all",5))
-
 res = rbind(res, res_mediation_temp)
 
 
 
-# AMR20 B cells
+# AMR 19 TC 
 
-mean_meth_AMR_temp = mean_meth_AMR$AMR20
+mean_meth_AMR_temp = mean_meth_AMR$AMR19
 mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
 
-immune_cons_temp = immune_cons$`B cells`
+immune_cons_temp = immune_cons$`T cells`
 immune_cons_temp = as.matrix(immune_cons_temp)
 
-covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfB )
+covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfB)
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -338,10 +386,134 @@ res_mediation_temp <- run_serial_mediation_grid2_alter(
   status = status,
   R = 1000  # pour aller plus vite
 )
-res_mediation_temp$feat = c(rep("AMR20_B cells",5))
-
+res_mediation_temp$feat = c(rep("AMR19_T cells",5))
 res = rbind(res, res_mediation_temp)
-# AMR27 Bcells
+
+
+
+
+
+
+# AMR 20 TC 
+
+mean_meth_AMR_temp = mean_meth_AMR$AMR20
+mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
+
+immune_cons_temp = immune_cons$`T cells`
+immune_cons_temp = as.matrix(immune_cons_temp)
+
+covars_LF = covars
+
+res_mediation_temp <- run_serial_mediation_grid2_alter(
+  mat_dmr = mean_meth_AMR_temp,
+  mat_cell = immune_cons_temp,
+  expo = expo,
+  covars_LF = covars_LF,
+  covars = covars,
+  time = time,
+  status = status,
+  R = 1000  # pour aller plus vite
+)
+res_mediation_temp$feat = c(rep("AMR20_T cells",5))
+res = rbind(res, res_mediation_temp)
+
+
+
+# AMR 20 all 
+
+mean_meth_AMR_temp = mean_meth_AMR$AMR20
+mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
+
+immune_cons_temp = immune_cons$all
+immune_cons_temp = as.matrix(immune_cons_temp)
+
+covars_LF = covars
+
+res_mediation_temp <- run_serial_mediation_grid2_alter(
+  mat_dmr = mean_meth_AMR_temp,
+  mat_cell = immune_cons_temp,
+  expo = expo,
+  covars_LF = covars_LF,
+  covars = covars,
+  time = time,
+  status = status,
+  R = 1000  # pour aller plus vite
+)
+res_mediation_temp$feat = c(rep("AMR20_all",5))
+res = rbind(res, res_mediation_temp)
+
+
+# AMR 23 BC
+
+mean_meth_AMR_temp = mean_meth_AMR$AMR23
+mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
+
+immune_cons_temp = immune_cons$`B cells`
+immune_cons_temp = as.matrix(immune_cons_temp)
+
+covars_LF = covars
+
+res_mediation_temp <- run_serial_mediation_grid2_alter(
+  mat_dmr = mean_meth_AMR_temp,
+  mat_cell = immune_cons_temp,
+  expo = expo,
+  covars_LF = covars_LF,
+  covars = covars,
+  time = time,
+  status = status,
+  R = 1000  # pour aller plus vite
+)
+res_mediation_temp$feat = c(rep("AMR23_B cells",5))
+res = rbind(res, res_mediation_temp)
+
+# AMR 23 TC
+
+mean_meth_AMR_temp = mean_meth_AMR$AMR23
+mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
+
+immune_cons_temp = immune_cons$`T cells`
+immune_cons_temp = as.matrix(immune_cons_temp)
+
+covars_LF = covars
+
+res_mediation_temp <- run_serial_mediation_grid2_alter(
+  mat_dmr = mean_meth_AMR_temp,
+  mat_cell = immune_cons_temp,
+  expo = expo,
+  covars_LF = covars_LF,
+  covars = covars,
+  time = time,
+  status = status,
+  R = 1000  # pour aller plus vite
+)
+res_mediation_temp$feat = c(rep("AMR23_T cells",5))
+res = rbind(res, res_mediation_temp)
+
+
+# AMR 23 all
+
+mean_meth_AMR_temp = mean_meth_AMR$AMR23
+mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
+
+immune_cons_temp = immune_cons$all
+immune_cons_temp = as.matrix(immune_cons_temp)
+
+covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfA)
+
+res_mediation_temp <- run_serial_mediation_grid2_alter(
+  mat_dmr = mean_meth_AMR_temp,
+  mat_cell = immune_cons_temp,
+  expo = expo,
+  covars_LF = covars_LF,
+  covars = covars,
+  time = time,
+  status = status,
+  R = 1000  # pour aller plus vite
+)
+res_mediation_temp$feat = c(rep("AMR23_all",5))
+res = rbind(res, res_mediation_temp)
+
+# AMR 27 BC
 
 mean_meth_AMR_temp = mean_meth_AMR$AMR27
 mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
@@ -362,18 +534,17 @@ res_mediation_temp <- run_serial_mediation_grid2_alter(
   R = 1000  # pour aller plus vite
 )
 res_mediation_temp$feat = c(rep("AMR27_B cells",5))
-
 res = rbind(res, res_mediation_temp)
 
-# AMR27 DCs
+# AMR 27 TC
 
 mean_meth_AMR_temp = mean_meth_AMR$AMR27
 mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
 
-immune_cons_temp = immune_cons$DCs
+immune_cons_temp = immune_cons$`T cells`
 immune_cons_temp = as.matrix(immune_cons_temp)
 
-covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfA )
+covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -385,12 +556,11 @@ res_mediation_temp <- run_serial_mediation_grid2_alter(
   status = status,
   R = 1000  # pour aller plus vite
 )
-res_mediation_temp$feat = c(rep("AMR27_DCs",5))
-
+res_mediation_temp$feat = c(rep("AMR27_T cells",5))
 res = rbind(res, res_mediation_temp)
 
 
-# AMR27 all
+# AMR 27 all
 
 mean_meth_AMR_temp = mean_meth_AMR$AMR27
 mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
@@ -398,7 +568,7 @@ mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
 immune_cons_temp = immune_cons$all
 immune_cons_temp = as.matrix(immune_cons_temp)
 
-covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfA )
+covars_LF = covars
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -411,400 +581,14 @@ res_mediation_temp <- run_serial_mediation_grid2_alter(
   R = 1000  # pour aller plus vite
 )
 res_mediation_temp$feat = c(rep("AMR27_all",5))
-
-res = rbind(res, res_mediation_temp)
-
-
-# AMR29 DCs
-
-mean_meth_AMR_temp = mean_meth_AMR$AMR29
-mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
-
-immune_cons_temp = immune_cons$DCs
-immune_cons_temp = as.matrix(immune_cons_temp)
-
-covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfA )
-
-res_mediation_temp <- run_serial_mediation_grid2_alter(
-  mat_dmr = mean_meth_AMR_temp,
-  mat_cell = immune_cons_temp,
-  expo = expo,
-  covars_LF = covars_LF,
-  covars = covars,
-  time = time,
-  status = status,
-  R = 1000  # pour aller plus vite
-)
-res_mediation_temp$feat = c(rep("AMR29_DCs",5))
-
-res = rbind(res, res_mediation_temp)
-
-
-# AMR29 DCs
-
-mean_meth_AMR_temp = mean_meth_AMR$AMR29
-mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
-
-immune_cons_temp = immune_cons$all
-immune_cons_temp = as.matrix(immune_cons_temp)
-
-covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfA )
-
-res_mediation_temp <- run_serial_mediation_grid2_alter(
-  mat_dmr = mean_meth_AMR_temp,
-  mat_cell = immune_cons_temp,
-  expo = expo,
-  covars_LF = covars_LF,
-  covars = covars,
-  time = time,
-  status = status,
-  R = 1000  # pour aller plus vite
-)
-res_mediation_temp$feat = c(rep("AMR29_all",5))
-
-res = rbind(res, res_mediation_temp)
-
-
-# AMR30 Bcells
-
-mean_meth_AMR_temp = mean_meth_AMR$AMR30
-mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
-
-immune_cons_temp = immune_cons$`B cells`
-immune_cons_temp = as.matrix(immune_cons_temp)
-
-covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfB )
-
-res_mediation_temp <- run_serial_mediation_grid2_alter(
-  mat_dmr = mean_meth_AMR_temp,
-  mat_cell = immune_cons_temp,
-  expo = expo,
-  covars_LF = covars_LF,
-  covars = covars,
-  time = time,
-  status = status,
-  R = 1000  # pour aller plus vite
-)
-res_mediation_temp$feat = c(rep("AMR30_B cells",5))
-
-res = rbind(res, res_mediation_temp)
-
-# AMR30 Bcells
-
-mean_meth_AMR_temp = mean_meth_AMR$AMR30
-mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
-
-immune_cons_temp = immune_cons$all
-immune_cons_temp = as.matrix(immune_cons_temp)
-
-covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfB )
-
-res_mediation_temp <- run_serial_mediation_grid2_alter(
-  mat_dmr = mean_meth_AMR_temp,
-  mat_cell = immune_cons_temp,
-  expo = expo,
-  covars_LF = covars_LF,
-  covars = covars,
-  time = time,
-  status = status,
-  R = 1000  # pour aller plus vite
-)
-res_mediation_temp$feat = c(rep("AMR30_all",5))
-
-res = rbind(res, res_mediation_temp)
-
-
-# AMR31 Bcells
-
-mean_meth_AMR_temp = mean_meth_AMR$AMR31
-mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
-
-immune_cons_temp = immune_cons$`B cells`
-immune_cons_temp = as.matrix(immune_cons_temp)
-
-covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfF )
-
-res_mediation_temp <- run_serial_mediation_grid2_alter(
-  mat_dmr = mean_meth_AMR_temp,
-  mat_cell = immune_cons_temp,
-  expo = expo,
-  covars_LF = covars_LF,
-  covars = covars,
-  time = time,
-  status = status,
-  R = 1000  # pour aller plus vite
-)
-res_mediation_temp$feat = c(rep("AMR31_B cells",5))
-
-res = rbind(res, res_mediation_temp)
-
-# AMR31 DCs
-
-mean_meth_AMR_temp = mean_meth_AMR$AMR31
-mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
-
-immune_cons_temp = immune_cons$DCs
-immune_cons_temp = as.matrix(immune_cons_temp)
-
-covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfF )
-
-res_mediation_temp <- run_serial_mediation_grid2_alter(
-  mat_dmr = mean_meth_AMR_temp,
-  mat_cell = immune_cons_temp,
-  expo = expo,
-  covars_LF = covars_LF,
-  covars = covars,
-  time = time,
-  status = status,
-  R = 1000  # pour aller plus vite
-)
-res_mediation_temp$feat = c(rep("AMR31_DCs",5))
-
-res = rbind(res, res_mediation_temp)
-
-
-# AMR31 all
-
-mean_meth_AMR_temp = mean_meth_AMR$AMR31
-mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
-
-immune_cons_temp = immune_cons$all
-immune_cons_temp = as.matrix(immune_cons_temp)
-
-covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfF )
-
-res_mediation_temp <- run_serial_mediation_grid2_alter(
-  mat_dmr = mean_meth_AMR_temp,
-  mat_cell = immune_cons_temp,
-  expo = expo,
-  covars_LF = covars_LF,
-  covars = covars,
-  time = time,
-  status = status,
-  R = 1000  # pour aller plus vite
-)
-res_mediation_temp$feat = c(rep("AMR31_all",5))
-
 res = rbind(res, res_mediation_temp)
 
 
 
-# AMR33 Bcells
 
+# AMR 36 BC
 
-mean_meth_AMR_temp = mean_meth_AMR$AMR33
-mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
-
-immune_cons_temp = immune_cons$`B cells`
-immune_cons_temp = as.matrix(immune_cons_temp)
-
-covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfB )
-
-res_mediation_temp <- run_serial_mediation_grid2_alter(
-  mat_dmr = mean_meth_AMR_temp,
-  mat_cell = immune_cons_temp,
-  expo = expo,
-  covars_LF = covars_LF,
-  covars = covars,
-  time = time,
-  status = status,
-  R = 1000  # pour aller plus vite
-)
-res_mediation_temp$feat = c(rep("AMR33_B cells",5))
-
-res = rbind(res, res_mediation_temp)
-
-
-# AMR34 Bcells
-
-
-mean_meth_AMR_temp = mean_meth_AMR$AMR34
-mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
-
-immune_cons_temp = immune_cons$`B cells`
-immune_cons_temp = as.matrix(immune_cons_temp)
-
-covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfB )
-
-res_mediation_temp <- run_serial_mediation_grid2_alter(
-  mat_dmr = mean_meth_AMR_temp,
-  mat_cell = immune_cons_temp,
-  expo = expo,
-  covars_LF = covars_LF,
-  covars = covars,
-  time = time,
-  status = status,
-  R = 1000  # pour aller plus vite
-)
-res_mediation_temp$feat = c(rep("AMR34_B cells",5))
-
-res = rbind(res, res_mediation_temp)
-
-
-# AMR39 Bcells
-
-
-mean_meth_AMR_temp = mean_meth_AMR$AMR39
-mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
-
-immune_cons_temp = immune_cons$`B cells`
-immune_cons_temp = as.matrix(immune_cons_temp)
-
-covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfB )
-
-res_mediation_temp <- run_serial_mediation_grid2_alter(
-  mat_dmr = mean_meth_AMR_temp,
-  mat_cell = immune_cons_temp,
-  expo = expo,
-  covars_LF = covars_LF,
-  covars = covars,
-  time = time,
-  status = status,
-  R = 1000  # pour aller plus vite
-)
-res_mediation_temp$feat = c(rep("AMR39_B cells",5))
-
-res = rbind(res, res_mediation_temp)
-
-
-# AMR46 Bcells
-
-mean_meth_AMR_temp = mean_meth_AMR$AMR46
-mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
-
-immune_cons_temp = immune_cons$`B cells`
-immune_cons_temp = as.matrix(immune_cons_temp)
-
-covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfB )
-
-res_mediation_temp <- run_serial_mediation_grid2_alter(
-  mat_dmr = mean_meth_AMR_temp,
-  mat_cell = immune_cons_temp,
-  expo = expo,
-  covars_LF = covars_LF,
-  covars = covars,
-  time = time,
-  status = status,
-  R = 1000  # pour aller plus vite
-)
-res_mediation_temp$feat = c(rep("AMR46_B cells",5))
-
-res = rbind(res, res_mediation_temp)
-
-
-# AMR46 DCs
-
-mean_meth_AMR_temp = mean_meth_AMR$AMR46
-mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
-
-immune_cons_temp = immune_cons$DCs
-immune_cons_temp = as.matrix(immune_cons_temp)
-
-covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfA , lfB)
-
-res_mediation_temp <- run_serial_mediation_grid2_alter(
-  mat_dmr = mean_meth_AMR_temp,
-  mat_cell = immune_cons_temp,
-  expo = expo,
-  covars_LF = covars_LF,
-  covars = covars,
-  time = time,
-  status = status,
-  R = 1000  # pour aller plus vite
-)
-res_mediation_temp$feat = c(rep("AMR46_DCs",5))
-
-res = rbind(res, res_mediation_temp)
-
-
-
-colnames(res) = c("estimate","ci_low","ci_high", "effect_type", "feat")
-
-saveRDS(res, "results/06_TCGA_CAT1_serial_med_V2_K8_corrected_with_selected_LF.rds")
-
-
-###########
-## DAG 2 ##
-###########
-
-# Mediation for each pairs
-
-# AMR8 B cells
-
-mean_meth_AMR_temp = mean_meth_AMR$AMR8
-mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
-
-immune_cons_temp = immune_cons$`B cells`
-immune_cons_temp = as.matrix(immune_cons_temp)
-
-covars_LF = covars
-
-res_mediation_init <- run_serial_mediation_grid2_alter(
-  mat_dmr = mean_meth_AMR_temp,
-  mat_cell = immune_cons_temp,
-  expo = expo,
-  covars_LF = covars_LF,
-  covars = covars,
-  time = time,
-  status = status,
-  R = 1000  # pour aller plus vite
-)
-res_mediation_init$feat = c(rep("AMR8_B cells",5))
-res = as.data.frame(res_mediation_init)
-
-
-# AMR14 B cells
-
-mean_meth_AMR_temp = mean_meth_AMR$AMR8
-mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
-
-immune_cons_temp = immune_cons$`B cells`
-immune_cons_temp = as.matrix(immune_cons_temp)
-
-covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfF)
-
-res_mediation_temp <- run_serial_mediation_grid2_alter(
-  mat_dmr = mean_meth_AMR_temp,
-  mat_cell = immune_cons_temp,
-  expo = expo,
-  covars_LF = covars_LF,
-  covars = covars,
-  time = time,
-  status = status,
-  R = 1000  # pour aller plus vite
-)
-res_mediation_temp$feat = c(rep("AMR14_B cells",5))
-res = rbind(res, res_mediation_temp)
-
-
-# AMR16 B cells
-
-mean_meth_AMR_temp = mean_meth_AMR$AMR16
-mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
-
-immune_cons_temp = immune_cons$`B cells`
-immune_cons_temp = as.matrix(immune_cons_temp)
-
-covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfF)
-
-res_mediation_temp <- run_serial_mediation_grid2_alter(
-  mat_dmr = mean_meth_AMR_temp,
-  mat_cell = immune_cons_temp,
-  expo = expo,
-  covars_LF = covars_LF,
-  covars = covars,
-  time = time,
-  status = status,
-  R = 1000  # pour aller plus vite
-)
-res_mediation_temp$feat = c(rep("AMR16_B cells",5))
-res = rbind(res, res_mediation_temp)
-
-
-
-# AMR40 B cells
-
-mean_meth_AMR_temp = mean_meth_AMR$AMR40
+mean_meth_AMR_temp = mean_meth_AMR$AMR36
 mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
 
 immune_cons_temp = immune_cons$`B cells`
@@ -822,16 +606,15 @@ res_mediation_temp <- run_serial_mediation_grid2_alter(
   status = status,
   R = 1000  # pour aller plus vite
 )
-res_mediation_temp$feat = c(rep("AMR40_B cells",5))
+res_mediation_temp$feat = c(rep("AMR36_B cells",5))
 res = rbind(res, res_mediation_temp)
 
+# AMR 23 TC
 
-# AMR42 B cells
-
-mean_meth_AMR_temp = mean_meth_AMR$AMR42
+mean_meth_AMR_temp = mean_meth_AMR$AMR36
 mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
 
-immune_cons_temp = immune_cons$`B cells`
+immune_cons_temp = immune_cons$`T cells`
 immune_cons_temp = as.matrix(immune_cons_temp)
 
 covars_LF = covars
@@ -846,13 +629,13 @@ res_mediation_temp <- run_serial_mediation_grid2_alter(
   status = status,
   R = 1000  # pour aller plus vite
 )
-res_mediation_temp$feat = c(rep("AMR42_B cells",5))
+res_mediation_temp$feat = c(rep("AMR36_T cells",5))
 res = rbind(res, res_mediation_temp)
 
 
-# AMR40 B all
+# AMR 36 all
 
-mean_meth_AMR_temp = mean_meth_AMR$AMR40
+mean_meth_AMR_temp = mean_meth_AMR$AMR36
 mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
 
 immune_cons_temp = immune_cons$all
@@ -870,18 +653,19 @@ res_mediation_temp <- run_serial_mediation_grid2_alter(
   status = status,
   R = 1000  # pour aller plus vite
 )
-res_mediation_temp$feat = c(rep("AMR40_all",5))
+res_mediation_temp$feat = c(rep("AMR36_all",5))
 res = rbind(res, res_mediation_temp)
 
-# AMR42 all
 
-mean_meth_AMR_temp = mean_meth_AMR$AMR42
+# AMR 38 BC
+
+mean_meth_AMR_temp = mean_meth_AMR$AMR38
 mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
 
-immune_cons_temp = immune_cons$all
+immune_cons_temp = immune_cons$`B cells`
 immune_cons_temp = as.matrix(immune_cons_temp)
 
-covars_LF = covars
+covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfF)
 
 res_mediation_temp <- run_serial_mediation_grid2_alter(
   mat_dmr = mean_meth_AMR_temp,
@@ -893,8 +677,195 @@ res_mediation_temp <- run_serial_mediation_grid2_alter(
   status = status,
   R = 1000  # pour aller plus vite
 )
-res_mediation_temp$feat = c(rep("AMR42_all",5))
+res_mediation_temp$feat = c(rep("AMR38_B cells",5))
 res = rbind(res, res_mediation_temp)
+
+# AMR 38 TC
+
+mean_meth_AMR_temp = mean_meth_AMR$AMR38
+mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
+
+immune_cons_temp = immune_cons$`T cells`
+immune_cons_temp = as.matrix(immune_cons_temp)
+
+covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfB,lfF)
+
+res_mediation_temp <- run_serial_mediation_grid2_alter(
+  mat_dmr = mean_meth_AMR_temp,
+  mat_cell = immune_cons_temp,
+  expo = expo,
+  covars_LF = covars_LF,
+  covars = covars,
+  time = time,
+  status = status,
+  R = 1000  # pour aller plus vite
+)
+res_mediation_temp$feat = c(rep("AMR38_T cells",5))
+res = rbind(res, res_mediation_temp)
+
+
+# AMR 38 all
+
+mean_meth_AMR_temp = mean_meth_AMR$AMR38
+mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
+
+immune_cons_temp = immune_cons$all
+immune_cons_temp = as.matrix(immune_cons_temp)
+
+covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfA,lfB,lfF)
+
+res_mediation_temp <- run_serial_mediation_grid2_alter(
+  mat_dmr = mean_meth_AMR_temp,
+  mat_cell = immune_cons_temp,
+  expo = expo,
+  covars_LF = covars_LF,
+  covars = covars,
+  time = time,
+  status = status,
+  R = 1000  # pour aller plus vite
+)
+res_mediation_temp$feat = c(rep("AMR38_all",5))
+res = rbind(res, res_mediation_temp)
+
+# AMR 48 all
+
+mean_meth_AMR_temp = mean_meth_AMR$AMR48
+mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
+
+immune_cons_temp = immune_cons$all
+immune_cons_temp = as.matrix(immune_cons_temp)
+
+covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfA,lfF)
+
+res_mediation_temp <- run_serial_mediation_grid2_alter(
+  mat_dmr = mean_meth_AMR_temp,
+  mat_cell = immune_cons_temp,
+  expo = expo,
+  covars_LF = covars_LF,
+  covars = covars,
+  time = time,
+  status = status,
+  R = 1000  # pour aller plus vite
+)
+res_mediation_temp$feat = c(rep("AMR48_all",5))
+res = rbind(res, res_mediation_temp)
+
+
+
+colnames(res) = c("estimate","ci_low","ci_high", "effect_type", "feat")
+
+saveRDS(res, "results/06_TCGA_CAT1_serial_med_V2_K8_corrected_with_selected_LF.rds")
+```
+
+
+```{r}
+
+########
+# DAG 2 
+########
+
+
+source("surv_serial_mediation_V2.R")
+
+library(dplyr)
+set.seed(123)
+
+
+med_tobacco_AMR = readRDS("results/03_tcga_top50_tobacco_AMR_fdr0_05_V2_K8_corrected.rds")
+
+mean_meth_AMR = readRDS("results/03_tcga_mean_meth_AMR_fdr0_05_V2_K8_corrected.rds")
+ 
+res_med = readRDS("results/02_tcga_med_tobacco_dnam_V2_K8_corrected.rds")
+
+tcga_data = readRDS("results/01_tcga_data_expo_deconv.rds")
+X_deconv = tcga_data$X_deconv$Consensus
+immune_cells = c("Macrophages","B cells", "T cells", "NK","DCs")
+X_immune = X_deconv[rownames(X_deconv) %in% immune_cells,]
+immune_cons = t(X_immune)
+immune_cons = as.data.frame(immune_cons)
+AMRs = colnames(mean_meth_AMR)
+mean_meth_AMR = as.data.frame(mean_meth_AMR)
+expo = res_med$hdmax2_step1_param$input$exposure_input
+covar = res_med$hdmax2_step1_param$input$covar
+time = res_med$hdmax2_step1_param$input$survival_time_input
+status = res_med$hdmax2_step1_param$input$censoring_status_input
+
+#LF 
+lfA = res_med$hdmax2_step1_param$AS_1$U[,1] 
+lfB = res_med$hdmax2_step1_param$AS_1$U[,2]
+lfC = res_med$hdmax2_step1_param$AS_1$U[,3]
+lfD = res_med$hdmax2_step1_param$AS_1$U[,4]
+lfE = res_med$hdmax2_step1_param$AS_1$U[,5]
+lfF = res_med$hdmax2_step1_param$AS_1$U[,6]
+lfG = res_med$hdmax2_step1_param$AS_1$U[,7]
+lfH = res_med$hdmax2_step1_param$AS_1$U[,8]
+
+# pairs list
+# DAGvalidated_CAT1 <- readRDS("results/05_DAG_validated_CAT1.rds")
+# DAGvalidated_CAT1 <- gsub("_", " ", DAGvalidated_CAT1)
+# 
+# DAGvalidated_CAT2 <- readRDS("results/05_DAG_validated_CAT2.rds")
+# DAGvalidated_CAT2 <- gsub("_", " ", DAGvalidated_CAT2)
+
+select_LF = readRDS("results/05_signLFs_by_pairs-A-I.rds")
+
+covars = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3])
+
+# create total immune class 
+immune_cons$all = rowSums(immune_cons)
+
+
+set.seed(456)
+DAGvalidated_CAT2 <- readRDS("results/05_DAG_validated_CAT2_withLF_2.rds")
+DAGvalidated_CAT2 <- gsub("_", " ", DAGvalidated_CAT2)
+
+mean_meth_AMR_temp = mean_meth_AMR$AMR7
+mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
+
+immune_cons_temp = immune_cons$all
+immune_cons_temp = as.matrix(immune_cons_temp)
+
+covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfA)
+
+res_mediation_init <- run_serial_mediation_grid2_alter(
+  mat_dmr = mean_meth_AMR_temp,
+  mat_cell = immune_cons_temp,
+  expo = expo,
+  covars_LF = covars_LF,
+  covars = covars,
+  time = time,
+  status = status,
+  R = 1000  # pour aller plus vite
+)
+
+res_mediation_init$feat = c(rep("AMR7_all",5))
+
+res = as.data.frame(res_mediation_init)
+
+# AMR 8 all
+
+# mean_meth_AMR_temp = mean_meth_AMR$AMR8
+# mean_meth_AMR_temp = as.matrix(mean_meth_AMR_temp)
+# 
+# immune_cons_temp = immune_cons$all
+# immune_cons_temp = as.matrix(immune_cons_temp)
+# 
+# covars_LF = data.frame(grade = covar[,1], age = covar[,2], gender = covar[,3], lfA)
+# 
+# res_mediation_temp <- run_serial_mediation_grid2_alter(
+#   mat_dmr = mean_meth_AMR_temp,
+#   mat_cell = immune_cons_temp,
+#   expo = expo,
+#   covars_LF = covars_LF,
+#   covars = covars,
+#   time = time,
+#   status = status,
+#   R = 10000  # pour aller plus vite
+# )
+# res_mediation_temp$feat = c(rep("AMR8_all",5))
+# res = rbind(res, res_mediation_temp)
+
+
 
 
 colnames(res) = c("estimate","ci_low","ci_high", "effect_type", "feat")
@@ -902,4 +873,3 @@ colnames(res) = c("estimate","ci_low","ci_high", "effect_type", "feat")
 saveRDS(res, "results/06_TCGA_CAT2_serial_med_V2_K8_corrected_with_selected_LF.rds")
 
 ```
-

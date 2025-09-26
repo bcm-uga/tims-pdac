@@ -10,7 +10,7 @@ date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
 ```{r corr_AMR immune V2 K8}
 library(reshape2)
 
-deconv = readRDS("tcga_pdac_mediation/results/01_tcga_data_expo_deconv.rds")
+deconv = readRDS("results/01_tcga_data_expo_deconv.rds")
 mean_meth_AMR = readRDS("results/03_tcga_top50_tobacco_AMR_fdr0_05_V2_K8_corrected.rds")
 mean_meth_AMR = mean_meth_AMR$mean_meth_mat
 X_deconv = deconv$X_deconv$Consensus

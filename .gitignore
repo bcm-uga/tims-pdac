@@ -1,4 +1,7 @@
 real_data/tcga_pdac_mediation
 real_data/results
-figure
+real_data/figures
+figures
 simulations/simulation_data
+real_data/surv_serial_mediation_V3.R
+simulations/simulation_data.zip

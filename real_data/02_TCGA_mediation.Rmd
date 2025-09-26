@@ -30,7 +30,7 @@ grade = tcga_data$grade
 X_deconv = tcga_data$X_deconv$Consensus
 M = tcga_data$M
 tobacco_bin = tcga_data$tobacco_bin
-alcohol = tcga_data$alcohol
+#alcohol = tcga_data$alcohol
 
 # keep only immune cells
 immune_cells = c("Neutrophils","Macrophages","B cells", "T cells", "NK","DCs")
@@ -46,7 +46,7 @@ X_immune = X_deconv[rownames(X_deconv) %in% immune_cells,]
 #mediation tobacco_dnam_survival with immune cells, LF estimation integration K = 8
 source("surv_parametric_alternative.R")
 
-exposure = tobacco_bin
+exposure = as.numeric(tobacco_bin)
 survival_time = as.vector(time)
 censoring_status = as.vector(status)
 #M = as.matrix(M_sample_13)
